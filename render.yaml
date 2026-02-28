@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: anti-fraude-api
+    env: node
+    buildCommand: npm install && npm run build --workspace api
+    startCommand: npm run start --workspace api
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: PORT
+        value: 3001
+
+  - type: worker
+    name: anti-fraude-worker
+    env: node
+    buildCommand: npm install && npm run build --workspace worker
+    startCommand: npm run start --workspace worker
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: anti-fraude-web
+    env: node
+    buildCommand: npm install && npm run build --workspace web
+    startCommand: npm run start --workspace web
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: NEXT_PUBLIC_API_URL
+        value: https://anti-fraude-api.onrender.com 
