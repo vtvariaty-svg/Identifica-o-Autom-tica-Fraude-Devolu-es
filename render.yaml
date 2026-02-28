@@ -1,4 +1,21 @@
+envGroups:
+  - name: shared-config
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+        # Crie um banco Neon via dashboard e cole a URL de conexão aqui no env do render após deploy
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: anti-fraude-redis
+          property: connectionString
+
 services:
+  - type: redis
+    name: anti-fraude-redis
+    ipAllowList: [] # allow all
+    plan: free
+
   - type: web
     name: anti-fraude-api
     env: node
@@ -7,12 +24,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: staging
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
       - key: PORT
         value: 3001
+    envGroups:
+      - shared-config
 
   - type: worker
     name: anti-fraude-worker
@@ -22,10 +37,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: staging
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
+    envGroups:
+      - shared-config
 
   - type: web
     name: anti-fraude-web
@@ -36,4 +49,4 @@ services:
       - key: NODE_ENV
         value: staging
       - key: NEXT_PUBLIC_API_URL
-        value: https://anti-fraude-api.onrender.com 
+        value: https://anti-fraude-api.onrender.com
