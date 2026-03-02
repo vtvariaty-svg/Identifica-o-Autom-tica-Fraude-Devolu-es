@@ -1,15 +1,26 @@
+import Link from "next/link";
+
 export default function Home() {
     return (
-        <div className="flex flex-col gap-4">
-            <h1 className="text-3xl font-bold">Identificação Automática de Fraude em Devoluções</h1>
-            <p>Projeto Base - ETAPA 0 Inicializada com sucesso.</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-8 text-center">
+            <h1 className="text-5xl font-extrabold text-blue-900 tracking-tight mb-4">
+                ShieldDev SaaS
+            </h1>
+            <p className="text-xl text-blue-700 mb-8 max-w-xl">
+                A plataforma definitiva para Identificação Automática de Fraude em Devoluções.
+            </p>
 
-            <div className="p-4 border border-gray-300 rounded">
-                <h2 className="text-xl font-semibold mb-2">Testes da API</h2>
-                <div className="flex gap-2">
-                    <a href="http://localhost:3001/health" target="_blank" className="p-2 bg-blue-500 text-white rounded">Testar /health</a>
-                    <a href="http://localhost:3001/db/ping" target="_blank" className="p-2 bg-green-500 text-white rounded">Testar /db/ping</a>
-                </div>
+            <div className="flex gap-4">
+                <Link href="/login" className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg shadow-md hover:bg-gray-50 transition-colors border border-blue-100">
+                    Fazer Login
+                </Link>
+                <Link href="/signup" className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                    Criar Conta
+                </Link>
+            </div>
+
+            <div className="mt-12 text-sm text-gray-500">
+                Se você já está conectado: <Link href="/app" className="text-blue-600 font-medium hover:underline">Acessar Painel &rarr;</Link>
             </div>
         </div>
     );

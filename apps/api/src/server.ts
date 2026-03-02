@@ -3,6 +3,9 @@ import cors from "@fastify/cors";
 import { v4 as uuidv4 } from "uuid";
 import { testQueue } from "./queue";
 import { prisma } from "./db";
+import fastifyCookie from "@fastify/cookie";
+import authRoutes from "./routes/auth.routes";
+import tenantRoutes from "./routes/tenant.routes";
 
 const server = Fastify({
     logger: {
@@ -12,8 +15,14 @@ const server = Fastify({
 });
 
 server.register(cors, {
-    origin: "*",
+    origin: true, // Allow request origin
+    credentials: true, // Allow cookies
 });
+
+server.register(fastifyCookie);
+
+server.register(authRoutes);
+server.register(tenantRoutes);
 
 server.setErrorHandler((error, request, reply) => {
     server.log.error(error);

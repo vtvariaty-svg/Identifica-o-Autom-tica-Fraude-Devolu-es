@@ -86,8 +86,7 @@ Se preferir não usar o Blueprint, configure os serviços manualmente seguindo e
 - **Start Command**: `npm run start --workspace web` (O script já está configurado para ouvir em 0.0.0.0).
 
 
-
-### Checklist de Aceite
+### Checklist de Aceite - Etapa 0
 
 - [x] Web abre em http://localhost:3000
 - [x] API responde GET http://localhost:3001/health (200)
@@ -96,3 +95,37 @@ Se preferir não usar o Blueprint, configure os serviços manualmente seguindo e
 - [x] Worker processa job “teste” e loga sucesso
 - [x] Redis conectado (log)
 - [x] Postgres conectado (log)
+
+---
+
+## ETAPA 1 - Identidade SaaS (Login, Tenant e Isolamento)
+
+A etapa 1 adiciona o sistema de contas, a estrutura multi-tenant (múltiplas organizações) e a segurança baseada em JWT Cookies via Fastify.
+
+### Novas Variáveis de Ambiente Necessárias
+Adicione ao seu `.env` na pasta `apps/api`:
+* `JWT_SECRET=super_secret_jwt_key_here` (Obrigatório! No Render, preencha com um hash forte).
+* `COOKIE_DOMAIN=seu-dominio.com` (Opcional, usado em produção para compartilhar cookies).
+* `COOKIE_SECURE=true` (Recomendado no Render/Prod).
+
+### Como testar o fluxo da Etapa 1
+1. **Signup:** Acesse `http://localhost:3000/signup`. Crie uma conta com seu email, senha e nome do seu primeiro Tenant (Organização).
+2. **Login Automático:** Após criar a conta, você será redirecionado automaticamente para a área logada `/app`.
+3. **Área Protegida:** Se tentar acessar `/app` sem estar logado, será redirecionado para `/login`.
+4. **Gerenciar Tenants:** Clique no menu lateral "Tenants" para listar suas organizações atuais e criar novas.
+5. **Alternar Tenants:** Crie um novo Tenant. Você verá que o "Tenant Atual" (no topo) permanece o original até que você clique em "Acessar" na nova organização, emitindo um novo token restrito àquele tenant.
+6. **Validar via API (`/auth/me`):** Essa rota certifica que o backend e o frontend estão interpretando os mesmos cookies e mantendo as informações da sessão seguras e atualizadas.
+*(Opcional: use o arquivo `apps/api/src/http/examples.http` e uma extensão como REST Client no VSCode para testar diretamente na API).*
+
+### Checklist de Aceite - Etapa 1
+
+- [x] Signup cria usuário e tenant (ou tenant default) e autentica
+- [x] Login autentica e retorna sessão válida
+- [x] `/auth/me` retorna usuário + tenant atual + role
+- [x] `/tenants` lista apenas tenants do usuário
+- [x] `/tenants/select` só permite tenant pertencente ao usuário (senão 403/404)
+- [x] Isolamento por tenant aplicado em rotas tenant-scoped
+- [x] Audit log grava signup/login/logout/create_tenant/select_tenant
+- [x] Front possui `/login` `/signup` `/app` com navegação e proteção de rota
+- [x] ETAPA 0 continua funcionando (web, /health, worker job)
+

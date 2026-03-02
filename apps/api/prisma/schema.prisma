@@ -15,3 +15,62 @@ model AppMeta {
 
   @@map("app_meta")
 }
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  email         String       @unique
+  password_hash String
+  created_at    DateTime     @default(now())
+  last_login_at DateTime?
+
+  memberships   Membership[]
+  auditLogs     AuditLog[]
+  
+  @@map("users")
+}
+
+model Tenant {
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String       @unique
+  created_at DateTime     @default(now())
+
+  memberships Membership[]
+  auditLogs   AuditLog[]
+
+  @@map("tenants")
+}
+
+model Membership {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  user_id    String   @db.Uuid
+  role       String   // 'owner', 'admin', 'analyst'
+  created_at DateTime @default(now())
+
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, user_id])
+  @@index([tenant_id])
+  @@index([user_id])
+  @@map("memberships")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String?  @db.Uuid
+  user_id    String?  @db.Uuid
+  action     String
+  ip         String?
+  user_agent String?
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  tenant     Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: SetNull)
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@map("audit_log")
+}
+

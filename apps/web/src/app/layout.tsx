@@ -1,5 +1,10 @@
+```
 import "./globals.css";
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { AuthProvider } from "@/components/AuthProvider";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
     title: "SaaS Anti-Fraude",
@@ -12,14 +17,17 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="pt-BR">
-            <body>
-                <nav className="p-4 bg-gray-800 text-white flex gap-4">
-                    <a href="/" className="font-bold">Home (Placeholder)</a>
-                    <a href="/dashboard">Dashboard (Placeholder)</a>
-                </nav>
-                <main className="p-8">{children}</main>
+        <html lang="en">
+            <body className={inter.className}>
+                <AuthProvider>
+                    <nav className="p-4 bg-gray-800 text-white flex gap-4">
+                        <a href="/" className="font-bold">Home (Placeholder)</a>
+                        <a href="/dashboard">Dashboard (Placeholder)</a>
+                    </nav>
+                    <main className="p-8">{children}</main>
+                </AuthProvider>
             </body>
         </html>
     );
 }
+```

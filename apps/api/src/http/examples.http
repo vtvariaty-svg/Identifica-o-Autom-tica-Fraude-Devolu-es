@@ -1,0 +1,58 @@
+### Variaveis
+@baseUrl = http://localhost:3001
+@authEmail = "admin@example.com"
+@authPassword = "password123"
+
+### 1. Health & DB
+GET {{baseUrl}}/health
+---
+GET {{baseUrl}}/db/ping
+
+### 2. Signup
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "email": {{authEmail}},
+  "password": {{authPassword}},
+  "tenantName": "Example Corp"
+}
+
+### 3. Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": {{authEmail}},
+  "password": {{authPassword}}
+}
+
+### 4. Fetch User Session (Me)
+GET {{baseUrl}}/auth/me
+# The token is sent automatically if your HTTP client saves cookies
+
+### 5. List Tenants
+GET {{baseUrl}}/tenants
+
+### 6. Create another Tenant
+POST {{baseUrl}}/tenants
+Content-Type: application/json
+
+{
+  "name": "Second Tenant"
+}
+
+### 7. Select Tenant (switch context)
+# Change the tenantId below to a valid one returned by GET /tenants
+POST {{baseUrl}}/tenants/select
+Content-Type: application/json
+
+{
+  "tenantId": "REPLACE_WITH_VALID_UUID"
+}
+
+### 8. Scope Check (must happen after successful login/select)
+GET {{baseUrl}}/tenant/scope-check
+
+### 9. Logout
+POST {{baseUrl}}/auth/logout
