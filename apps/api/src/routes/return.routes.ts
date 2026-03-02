@@ -14,7 +14,7 @@ export const returnRoutes: FastifyPluginAsync = async (app) => {
         });
 
         const { limit, offset } = querySchema.parse(request.query);
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         const returns = await prisma.return.findMany({
             where: { tenant_id: tenantId },
@@ -52,7 +52,7 @@ export const returnRoutes: FastifyPluginAsync = async (app) => {
         });
 
         const { id } = paramsSchema.parse(request.params);
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         const ret = await prisma.return.findFirst({
             where: {

@@ -15,7 +15,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         });
 
         const { limit, offset } = querySchema.parse(request.query);
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         const orders = await prisma.order.findMany({
             where: { tenant_id: tenantId },
@@ -54,7 +54,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         });
 
         const { id } = paramsSchema.parse(request.params);
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         const order = await prisma.order.findFirst({
             where: {
