@@ -25,6 +25,7 @@ model User {
 
   memberships   Membership[]
   auditLogs     AuditLog[]
+  decisions     Decision[]
   
   @@map("users")
 }
@@ -35,8 +36,19 @@ model Tenant {
   slug       String       @unique
   created_at DateTime     @default(now())
 
-  memberships Membership[]
-  auditLogs   AuditLog[]
+  memberships      Membership[]
+  auditLogs        AuditLog[]
+  customers        Customer[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  returns          Return[]
+  returnItems      ReturnItem[]
+  fraudScores      FraudScore[]
+  decisions        Decision[]
+  featuresSnapshot FeaturesSnapshot[]
+  connectors       Connector[]
+  importRuns       ImportRun[]
+  importErrors     ImportError[]
 
   @@map("tenants")
 }
@@ -72,5 +84,244 @@ model AuditLog {
 
   @@index([tenant_id, created_at(sort: Desc)])
   @@map("audit_log")
+}
+
+model Customer {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  external_id String?
+  email       String?
+  phone       String?
+  name        String?
+  document    String?
+  metadata    Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([tenant_id, external_id])
+  @@index([tenant_id, email])
+  @@map("customers")
+}
+
+model Order {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenant_id      String    @db.Uuid
+  external_id    String?
+  connector_id   String?   @db.Uuid
+  customer_id    String?   @db.Uuid
+  status         String    @default("unknown")
+  currency       String?
+  subtotal_cents Int?
+  shipping_cents Int?
+  discount_cents Int?
+  total_cents    Int?
+  placed_at      DateTime?
+  raw_payload    Json?
+  metadata       Json?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  tenant     Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  connector  Connector?    @relation(fields: [connector_id], references: [id], onDelete: SetNull)
+  customer   Customer?     @relation(fields: [customer_id], references: [id], onDelete: SetNull)
+  items      OrderItem[]
+  returns    Return[]
+
+  @@index([tenant_id, external_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, placed_at])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenant_id         String   @db.Uuid
+  order_id          String   @db.Uuid
+  external_id       String?
+  sku               String?
+  product_name      String?
+  quantity          Int      @default(1)
+  unit_price_cents  Int?
+  total_price_cents Int?
+  metadata          Json?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @default(now()) @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  order       Order        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  returnItems ReturnItem[]
+
+  @@index([tenant_id, order_id])
+  @@map("order_items")
+}
+
+model Return {
+  id                  String    @id @default(uuid()) @db.Uuid
+  tenant_id           String    @db.Uuid
+  external_id         String?
+  order_id            String    @db.Uuid
+  connector_id        String?   @db.Uuid
+  status              String    @default("requested")
+  reason              String?
+  requested_at        DateTime?
+  received_at         DateTime?
+  refunded_at         DateTime?
+  refund_amount_cents Int?
+  raw_payload         Json?
+  metadata            Json?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @default(now()) @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  order            Order             @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  connector        Connector?        @relation(fields: [connector_id], references: [id], onDelete: SetNull)
+  items            ReturnItem[]
+  fraudScore       FraudScore?
+  decision         Decision?
+  featuresSnapshot FeaturesSnapshot[]
+
+  @@index([tenant_id, order_id])
+  @@index([tenant_id, external_id])
+  @@map("returns")
+}
+
+model ReturnItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenant_id     String   @db.Uuid
+  return_id     String   @db.Uuid
+  order_item_id String?  @db.Uuid
+  sku           String?
+  product_name  String?
+  quantity      Int      @default(1)
+  condition     String?
+  metadata      Json?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  returnObj Return     @relation(fields: [return_id], references: [id], onDelete: Cascade)
+  orderItem OrderItem? @relation(fields: [order_item_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, return_id])
+  @@map("return_items")
+}
+
+model FraudScore {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenant_id     String    @db.Uuid
+  return_id     String    @unique @db.Uuid
+  model_version String?
+  score         Decimal?  @db.Decimal(5, 4)
+  risk_level    String?
+  explanation   Json?
+  computed_at   DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+
+  tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, return_id])
+  @@map("fraud_scores")
+}
+
+model Decision {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenant_id          String   @db.Uuid
+  return_id          String   @unique @db.Uuid
+  decided_by_user_id String?  @db.Uuid
+  decision           String
+  reason             String?
+  decided_at         DateTime @default(now())
+  metadata           Json?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @default(now()) @updatedAt
+
+  tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
+  user      User?  @relation(fields: [decided_by_user_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, return_id])
+  @@index([tenant_id, decided_at])
+  @@map("decisions")
+}
+
+model FeaturesSnapshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenant_id      String   @db.Uuid
+  return_id      String   @db.Uuid
+  schema_version String   @default("v1")
+  features       Json
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now()) @updatedAt
+
+  tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, return_id])
+  @@map("features_snapshot")
+}
+
+model Connector {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  type       String
+  name       String
+  status     String   @default("inactive")
+  config     Json?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  orders     Order[]
+  returns    Return[]
+  importRuns ImportRun[]
+
+  @@index([tenant_id, type])
+  @@index([tenant_id, status])
+  @@map("connectors")
+}
+
+model ImportRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenant_id    String    @db.Uuid
+  connector_id String?   @db.Uuid
+  source       String
+  status       String
+  started_at   DateTime  @default(now())
+  finished_at  DateTime?
+  summary      Json?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @default(now()) @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  connector    Connector?    @relation(fields: [connector_id], references: [id], onDelete: SetNull)
+  importErrors ImportError[]
+
+  @@index([tenant_id, connector_id])
+  @@index([tenant_id, started_at])
+  @@map("import_runs")
+}
+
+model ImportError {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenant_id     String   @db.Uuid
+  import_run_id String   @db.Uuid
+  entity_type   String?
+  external_id   String?
+  message       String
+  payload       Json?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  importRun ImportRun @relation(fields: [import_run_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, import_run_id])
+  @@index([tenant_id, created_at])
+  @@map("import_errors")
 }
 

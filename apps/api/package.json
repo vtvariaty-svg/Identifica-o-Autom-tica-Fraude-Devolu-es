@@ -5,7 +5,8 @@
     "scripts": {
         "dev": "tsx watch src/server.ts",
         "build": "prisma generate && tsc",
-        "start": "node dist/server.js"
+        "start": "node dist/server.js",
+        "seed:canonical": "tsx scripts/seed_canonical.ts"
     },
     "dependencies": {
         "@fastify/cookie": "^9.3.1",

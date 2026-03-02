@@ -51,6 +51,45 @@ Content-Type: application/json
   "tenantId": "REPLACE_WITH_VALID_UUID"
 }
 
+### Select Tenant B
+POST http://localhost:3333/tenants/select
+Content-Type: application/json
+
+{
+    "tenantId": "{{TENANT_B_ID}}"
+}
+
+###
+
+// ==========================================
+// STEP 2: Canonical Data Model Endpoints
+// Verify Multi-Tenancy Isolation
+// ==========================================
+
+### Get Orders (Will return only orders for the currently selected tenant)
+GET http://localhost:3333/orders?limit=10&offset=0
+Content-Type: application/json
+
+### Get specific order by ID (replace with order A1 ID or order B1 ID)
+GET http://localhost:3333/orders/00000000-0000-0000-0000-0000000000A1
+Content-Type: application/json
+
+### Get Returns (Will return only returns for the currently selected tenant)
+GET http://localhost:3333/returns?limit=10&offset=0
+Content-Type: application/json
+
+### Get specific return by ID (replace with a valid ID from the list above)
+GET http://localhost:3333/returns/REPLACE_WITH_RETURN_ID
+Content-Type: application/json
+
+###
+
+// To prove isolation:
+// 1. Login with ownerA@seed.com
+// 2. Call GET /orders. You should see "ext-order-A1".
+// 3. Login with ownerB@seed.com
+// 4. Call GET /orders. You should see "ext-order-B1".
+// 5. While logged as B, try accessing specific order A1 ID. It should return 404.
 ### 8. Scope Check (must happen after successful login/select)
 GET {{baseUrl}}/tenant/scope-check
 

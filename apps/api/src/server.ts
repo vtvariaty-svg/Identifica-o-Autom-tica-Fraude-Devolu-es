@@ -6,6 +6,8 @@ import { prisma } from "./db";
 import fastifyCookie from "@fastify/cookie";
 import authRoutes from "./routes/auth.routes";
 import tenantRoutes from "./routes/tenant.routes";
+import orderRoutes from "./routes/order.routes";
+import returnRoutes from "./routes/return.routes";
 
 const server = Fastify({
     logger: {
@@ -21,8 +23,10 @@ server.register(cors, {
 
 server.register(fastifyCookie);
 
-server.register(authRoutes);
-server.register(tenantRoutes);
+server.register(authRoutes, { prefix: "/auth" });
+server.register(tenantRoutes, { prefix: "/tenants" });
+server.register(orderRoutes, { prefix: "/orders" });
+server.register(returnRoutes, { prefix: "/returns" });
 
 server.setErrorHandler((error, request, reply) => {
     server.log.error(error);

@@ -129,3 +129,29 @@ Adicione ao seu `.env` na pasta `apps/api`:
 - [x] Front possui `/login` `/signup` `/app` com navegação e proteção de rota
 - [x] ETAPA 0 continua funcionando (web, /health, worker job)
 
+---
+
+## ETAPA 2 - Modelo de Dados Canônico (Pedidos/Devoluções)
+
+A Etapa 2 estabelece o schema do banco de dados para suportar a operação principal: `customers`, `orders`, `returns`, etc. Todos sob a arquitetura multilocatário construída na Etapa 1.
+
+### Como testar o fluxo da Etapa 2
+1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
+2. **Setup Fake Data**: Popule o banco para isolamento rodando:
+   ```bash
+   npm run seed:canonical --workspace api
+   ```
+   *(Este script cria 2 usuários proprietários distintos `ownerA@seed.com` e `ownerB@seed.com`, além de criar pedidos e devoluções que pertencem exclusivamente a cada tenant.)*
+3. **Validar via REST Client (VSCode)**:
+   - Abra o arquivo `apps/api/src/http/examples.http`.
+   - Use o Snippet de *Login* com as credenciais `ownerA@seed.com` (senha: `password123`).
+   - Use o Snippet de *Get Orders*. Você só poderá enxergar "ext-order-A1".
+   - Inverta o Login para `ownerB@seed.com` e rode novamente. Só verá o B1 aprovando a separação e o isolamento seguro.
+
+### Checklist de Aceite - Etapa 2
+- [x] Multi-tenant isolamento rígido em `orders` e `returns` API usando `req.auth.tenantId`.
+- [x] Todas as novas 11 tabelas adicionadas ao `schema.prisma` com `tenant_id` e PKs UUID exclusivas.
+- [x] Script `seed_canonical.ts` funcional e idempotente testando dois tenants separados.
+- [x] GET `/orders` e `/returns` retornam dados limpos, paginados e sem vazar informações.
+- [x] Não vazou lógicas/telas do Front além do acesso contínuo às rotas e sessão existentes.
+
