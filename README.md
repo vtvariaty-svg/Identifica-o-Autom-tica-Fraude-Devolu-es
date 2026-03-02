@@ -83,7 +83,8 @@ Se preferir não usar o Blueprint, configure os serviços manualmente seguindo e
 ### 2. Frontend (Web Service)
 - **Root Directory**: `.`
 - **Build Command**: `npm install && npm run build --workspace web`
-- **Start Command**: `npm run start --workspace web`
+- **Start Command**: `npm run start --workspace web` (O script já está configurado para ouvir em 0.0.0.0).
+
 
 
 ### Checklist de Aceite

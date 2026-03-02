@@ -28,7 +28,6 @@ services:
     env: node
     buildCommand: npm install && npm run build --workspace worker
     startCommand: npm run start --workspace worker
-    startCommand: npm run start --workspace worker
     envVars:
       - key: NODE_ENV
         value: staging
