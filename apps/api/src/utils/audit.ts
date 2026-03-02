@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 
 export async function logAudit(params: {
@@ -16,7 +17,7 @@ export async function logAudit(params: {
                 action: params.action,
                 ip: params.ip || null,
                 user_agent: params.userAgent || null,
-                metadata: params.metadata ? JSON.stringify(params.metadata) : null,
+                metadata: params.metadata ? params.metadata : Prisma.JsonNull,
             },
         });
     } catch (err) {
