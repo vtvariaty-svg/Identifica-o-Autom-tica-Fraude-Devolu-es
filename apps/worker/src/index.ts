@@ -8,13 +8,11 @@ const connection = {
     url: process.env.REDIS_URL || "redis://localhost:6379",
 };
 
-const prisma = new PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.DATABASE_URL,
-        },
-    },
-});
+if (!process.env.DATABASE_URL) {
+    console.error("CRITICAL ERROR: DATABASE_URL is not defined in environment variables for Worker.");
+}
+
+const prisma = new PrismaClient();
 
 async function start() {
     console.log("Worker starting...");
