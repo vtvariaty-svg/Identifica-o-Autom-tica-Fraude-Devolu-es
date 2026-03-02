@@ -4,10 +4,12 @@ import { v4 as uuidv4 } from "uuid";
 import { testQueue } from "./queue";
 import { prisma } from "./db";
 import fastifyCookie from "@fastify/cookie";
+import fastifyMultipart from "@fastify/multipart";
 import authRoutes from "./routes/auth.routes";
 import tenantRoutes from "./routes/tenant.routes";
 import orderRoutes from "./routes/order.routes";
 import returnRoutes from "./routes/return.routes";
+import importRoutes from "./routes/import.routes";
 
 const server = Fastify({
     logger: {
@@ -22,11 +24,17 @@ server.register(cors, {
 });
 
 server.register(fastifyCookie);
+server.register(fastifyMultipart, {
+    limits: {
+        fileSize: 10 * 1024 * 1024, // Limit to 10MB MVP
+    }
+});
 
 server.register(authRoutes, { prefix: "/auth" });
 server.register(tenantRoutes, { prefix: "/tenants" });
 server.register(orderRoutes, { prefix: "/orders" });
 server.register(returnRoutes, { prefix: "/returns" });
+server.register(importRoutes, { prefix: "/imports" });
 
 server.setErrorHandler((error, request, reply) => {
     server.log.error(error);

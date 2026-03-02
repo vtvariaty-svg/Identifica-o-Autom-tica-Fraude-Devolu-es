@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import IORedis from "ioredis";
+import importCsvJob from "./jobs/import_csv.job";
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ const connection = new IORedis(process.env.REDIS_URL || "", {
 
 if (!process.env.DATABASE_URL) {
     console.error("CRITICAL ERROR: DATABASE_URL is not defined in environment variables for Worker.");
+    process.exit(1);
 }
 
 const prisma = new PrismaClient();
@@ -30,6 +32,11 @@ async function start() {
         "jobs",
         async (job) => {
             console.log(`[Worker] Executing job ${job.id} of type ${job.name}`);
+
+            if (job.name === "import_csv") {
+                return await importCsvJob(job);
+            }
+
             console.log(`[Worker] Data:`, job.data);
             return { success: true, processedAt: new Date().toISOString() };
         },

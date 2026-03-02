@@ -286,30 +286,41 @@ model Connector {
 }
 
 model ImportRun {
-  id           String    @id @default(uuid()) @db.Uuid
-  tenant_id    String    @db.Uuid
-  connector_id String?   @db.Uuid
-  source       String
-  status       String
-  started_at   DateTime  @default(now())
+  id           String        @id @default(uuid())
+  tenant_id    String
+  connector_id String?
+  source       String        @default("csv")
+  status       String        // "queued", "running", "success", "failed"
+  entity_type  String        // "customers", "orders", "order_items", "returns", "return_items"
+  
+  file_name    String?
+  file_mime    String?
+  file_bytes   Bytes?
+
+  total_rows   Int?
+  success_rows Int?
+  error_rows   Int?
+  
+  started_at   DateTime      @default(now())
   finished_at  DateTime?
   summary      Json?
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @default(now()) @updatedAt
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @default(now()) @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  connector    Connector?    @relation(fields: [connector_id], references: [id], onDelete: SetNull)
-  importErrors ImportError[]
+  tenant       Tenant        @relation(fields: [tenant_id], references: [id])
+  connector    Connector?    @relation(fields: [connector_id], references: [id])
+  errors       ImportError[]
 
-  @@index([tenant_id, connector_id])
-  @@index([tenant_id, started_at])
+  @@index([tenant_id, status])
   @@map("import_runs")
 }
 
 model ImportError {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenant_id     String   @db.Uuid
-  import_run_id String   @db.Uuid
+  id            String    @id @default(uuid())
+  tenant_id     String
+  import_run_id String
+
+  line_number   Int?
   entity_type   String?
   external_id   String?
   message       String

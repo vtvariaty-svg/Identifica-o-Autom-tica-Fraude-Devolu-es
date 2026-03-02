@@ -134,6 +134,29 @@ Adicione ao seu `.env` na pasta `apps/api`:
 ## ETAPA 2 - Modelo de Dados Canônico (Pedidos/Devoluções)
 
 A Etapa 2 estabelece o schema do banco de dados para suportar a operação principal: `customers`, `orders`, `returns`, etc. Todos sob a arquitetura multilocatário construída na Etapa 1.
+- Para validar: repare que o retorno agora trará os campos que mapeamos (`external_id`, `status`, `refund_amount_cents`). Tente acessar outro tenant e confirme que a listagem de pedidos desse outro não mistura os dados.
+
+---
+
+## Etapa 3: Ingestão de Dados CSV (Pipeline & Worker)
+
+Esta etapa consolida o suporte para onboarding rápido (Fallback) via importação de planilhas.
+
+1. **Upload no Front-End:** Acesse a plataforma em `/app/import`.
+2. **Histórico:** Você será redirecionado para os detalhes após enviar, onde poderá testar o Polling simulado pelas apurações da API. Também há uma página de listagem em `/app/imports`.
+3. **Upload via cURL (Backend Auth Required):**
+   ```bash
+   curl -X POST http://localhost:3001/imports/csv \
+     -H "Cookie: token=SEU_TOKEN_AQUI" \
+     -F "entityType=orders" \
+     -F "file=@./samples/csv/orders.sample.csv"
+   ```
+
+**Testando Validadores e Idempotência:**
+- O worker realiza leitura assíncrona. 
+- Suba o arquivo `samples/csv/orders.sample.csv`.
+- Você observará um pedido falso e uma linha vazia (causando um erro na validação de dependências). No fim, a listagem mostrará 1 sucesso e 1 erro justificado.
+- Verifique a UI em `/app/imports/[id]` para ler os erros linha-a-linha parseados!
 
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
