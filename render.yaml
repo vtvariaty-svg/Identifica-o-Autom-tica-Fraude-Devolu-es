@@ -7,7 +7,7 @@ services:
   - type: web
     name: anti-fraude-api
     env: node
-    buildCommand: npm install && npm run build --workspace api
+    buildCommand: npm install && npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build --workspace api
     startCommand: npm run start --workspace api
     envVars:
       - key: NODE_ENV
@@ -26,7 +26,7 @@ services:
   - type: worker
     name: anti-fraude-worker
     env: node
-    buildCommand: npm install && npm run build --workspace worker
+    buildCommand: npm install && npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build --workspace worker
     startCommand: npm run start --workspace worker
     envVars:
       - key: NODE_ENV

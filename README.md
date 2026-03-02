@@ -71,6 +71,21 @@ Temos um arquivo `render.yaml` na raiz para Blueprint configuration do Render.
 
 Para migrar a base no Render, recomendamos utilizar o console nativo SSH após deploy da API/Worker ou adicioná-lo num _Pre-Deploy command_ (ex: `npx prisma migrate deploy`).
 
+## Deploy Manual no Render (Opcional)
+
+Se preferir não usar o Blueprint, configure os serviços manualmente seguindo estas regras:
+
+### 1. API (Web Service) e Worker (Background Worker)
+- **Root Directory**: `.`
+- **Build Command**: `npm install && npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build --workspace api` (troque `api` por `worker` no worker).
+- **Start Command**: `npm run start --workspace api` (troque `api` por `worker` no worker).
+
+### 2. Frontend (Web Service)
+- **Root Directory**: `.`
+- **Build Command**: `npm install && npm run build --workspace web`
+- **Start Command**: `npm run start --workspace web`
+
+
 ### Checklist de Aceite
 
 - [x] Web abre em http://localhost:3000
