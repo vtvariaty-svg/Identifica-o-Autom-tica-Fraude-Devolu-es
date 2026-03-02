@@ -1,12 +1,13 @@
 import { Worker } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
+import IORedis from "ioredis";
 
 dotenv.config();
 
-const connection = {
-    url: process.env.REDIS_URL || "redis://localhost:6379",
-};
+const connection = new IORedis(process.env.REDIS_URL || "", {
+    maxRetriesPerRequest: null,
+});
 
 if (!process.env.DATABASE_URL) {
     console.error("CRITICAL ERROR: DATABASE_URL is not defined in environment variables for Worker.");
@@ -28,19 +29,11 @@ async function start() {
     const worker = new Worker(
         "jobs",
         async (job) => {
-            console.log(`[WORKER] PROCESSANDO JOB TESTE: ${job.id}`, job.data);
-
-            try {
-                await prisma.$queryRaw`SELECT 1`;
-                console.log(`[WORKER] Job ${job.id} verified DB connection successfully.`);
-            } catch (err) {
-                console.error(`[WORKER] DB check failed during job ${job.id}:`, err);
-                throw err;
-            }
-
+            console.log(`[Worker] Executing job ${job.id} of type ${job.name}`);
+            console.log(`[Worker] Data:`, job.data);
             return { success: true, processedAt: new Date().toISOString() };
         },
-        { connection }
+        { connection: connection as any }
     );
 
     worker.on("ready", () => {
