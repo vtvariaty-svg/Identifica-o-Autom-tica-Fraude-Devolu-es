@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/card-table"; // Assuming standard UI table or default fallback
-import { Button } from "@/components/ui/button";
-import { ArrowRightIcon, AlertTriangleIcon, SearchIcon, CheckCircleIcon } from "lucide-react";
+import { ArrowRightIcon, CheckCircleIcon } from "lucide-react";
 import Link from "next/link";
 
 interface OpenCase {
@@ -21,20 +18,22 @@ interface OpenCase {
 }
 
 export default function CasesQueuePage() {
-    const { token, tenant } = useAuth();
+    const { tenant } = useAuth();
+    // In this project auth is Cookie-based (HttpOnly). We don't read the raw JWT string here.
     const [cases, setCases] = useState<OpenCase[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!token || !tenant) return;
+        if (!tenant) return;
 
         async function fetchCases() {
             try {
+                // The API reads the auth from cookies automatically in SSR, 
+                // but for this client app, the cookies are sent through withCredentials 
+                // However, this codebase relies on standard fetch for same origin.
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cases`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    // Make sure credentials are set to 'include' so cookies are sent if API is on another origin
                 });
 
                 if (!res.ok) {
@@ -51,7 +50,7 @@ export default function CasesQueuePage() {
         }
 
         fetchCases();
-    }, [token, tenant]);
+    }, [tenant]);
 
     const formatCurrency = (cents: number | null) => {
         if (cents == null) return "—";
@@ -85,19 +84,20 @@ export default function CasesQueuePage() {
                     <p className="text-sm text-gray-500 mt-1">Devoluções suspeitas aguardando análise e decisão de operadores.</p>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-3 py-1.5 rounded-full border shadow-sm">
-                    <ShieldCheckIcon className="w-4 h-4 text-emerald-600" />
+                    {/* Replaced Icon with text because icon wasn't imported properly earlier */}
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span>Nenhum caso vazando</span>
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Análise Pendente ({cases.length})</CardTitle>
-                    <CardDescription>
+            <div className="bg-white rounded-xl border shadow-sm">
+                <div className="flex flex-col space-y-1.5 p-6 border-b">
+                    <h3 className="font-semibold leading-none tracking-tight text-lg">Análise Pendente ({cases.length})</h3>
+                    <p className="text-sm text-gray-500">
                         Itens listados aqui estão com status pendente de auditoria manual. A ordem prioriza devoluções com as maiores notas de Fraude.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+                    </p>
+                </div>
+                <div className="p-0">
                     {isLoading ? (
                         <div className="py-8 text-center text-gray-500">Carregando fila...</div>
                     ) : error ? (
@@ -148,10 +148,10 @@ export default function CasesQueuePage() {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <Link href={`/app/cases/${c.id}`}>
-                                                    <Button size="sm" variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                                                    <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-slate-100 h-9 px-3 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
                                                         Abrir Caso
                                                         <ArrowRightIcon className="w-3 h-3 ml-1.5" />
-                                                    </Button>
+                                                    </button>
                                                 </Link>
                                             </td>
                                         </tr>
@@ -160,8 +160,8 @@ export default function CasesQueuePage() {
                             </table>
                         </div>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 }

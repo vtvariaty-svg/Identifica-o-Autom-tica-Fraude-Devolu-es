@@ -3,15 +3,9 @@
 import { useAuth } from "@/components/AuthProvider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "react-hot-toast";
 
 export default function CaseDecisionClient({ id, initialData }: { id: string, initialData: any }) {
-    const { token, role } = useAuth();
+    const { role } = useAuth();
     const router = useRouter();
 
     const [decision, setDecision] = useState<"approve" | "reject" | "request_evidence">("approve");
@@ -23,10 +17,8 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
     const latestDecision = initialData.latestDecision;
 
     const handleSubmit = async () => {
-        if (!token) return;
-
         if ((decision === "reject" || decision === "request_evidence") && note.length < 5) {
-            toast.error("Para recusar ou pedir evidência, anexe um detalhamento (mín: 5 caracteres).");
+            alert("Para recusar ou pedir evidência, anexe um detalhamento (mín: 5 caracteres).");
             return;
         }
 
@@ -36,7 +28,6 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ decision, note })
             });
@@ -46,11 +37,11 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
                 throw new Error(errData.error || "Falha ao enviar decisão");
             }
 
-            toast.success("Decisão gravada com sucesso!");
+            alert("Decisão gravada com sucesso!");
             router.push("/app/cases");
             router.refresh();
         } catch (error: any) {
-            toast.error(error.message);
+            alert(error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -58,12 +49,12 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
 
     if (status === "resolved" && latestDecision) {
         return (
-            <Card className="border-emerald-200">
-                <CardHeader className="bg-emerald-50/50">
-                    <CardTitle className="text-emerald-800">Caso Resolvido</CardTitle>
-                    <CardDescription>Decisão tomada em {new Date(latestDecision.decidedAt).toLocaleString("pt-BR")}</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
+            <div className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
+                <div className="flex flex-col space-y-1.5 p-6 border-b bg-emerald-50/50">
+                    <h3 className="font-semibold leading-none tracking-tight text-lg text-emerald-800">Caso Resolvido</h3>
+                    <p className="text-sm text-gray-500">Decisão tomada em {new Date(latestDecision.decidedAt).toLocaleString("pt-BR")}</p>
+                </div>
+                <div className="p-6 pt-6 space-y-4">
                     <div className="grid gap-2 text-sm">
                         <div className="font-medium text-gray-500">Veredito:</div>
                         <div className="font-semibold text-gray-900 uppercase">
@@ -76,61 +67,60 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
                             {latestDecision.note || "Sem nota registrada."}
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         );
     }
 
     return (
-        <Card className="border-indigo-100 shadow-xl shadow-indigo-100/50 sticky top-6">
-            <CardHeader className="bg-indigo-50/50 border-b border-indigo-50">
-                <CardTitle className="text-indigo-900">Decisão Operacional</CardTitle>
-                <CardDescription>
+        <div className="bg-white rounded-xl border border-indigo-100 shadow-xl shadow-indigo-100/50 overflow-hidden sticky top-6">
+            <div className="flex flex-col space-y-1.5 p-6 border-b bg-indigo-50/50 border-indigo-50">
+                <h3 className="font-semibold leading-none tracking-tight text-lg text-indigo-900">Decisão Operacional</h3>
+                <p className="text-sm text-gray-500">
                     {isReadOnly
                         ? "O seu perfil (Analyst) possui apenas permissão de leitura sobre esse caso."
                         : "Analise os riscos apontados pela Inteligência Artificial e tome uma ação definitiva para este caso."}
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-8">
-                <RadioGroup
-                    value={decision}
-                    onValueChange={(v: "approve" | "reject" | "request_evidence") => setDecision(v)}
-                    disabled={isReadOnly || isSubmitting}
+                </p>
+            </div>
+            <div className="p-6 pt-6 space-y-8">
+                <div
+                    role="radiogroup"
+                    className="grid gap-2"
                 >
-                    <div className="flex items-center space-x-3 p-3 rounded border bg-emerald-50/30 hover:bg-emerald-50/50 transition-colors">
-                        <RadioGroupItem value="approve" id="r-approve" />
-                        <Label htmlFor="r-approve" className="font-medium cursor-pointer">
+                    <label className={`flex items-start space-x-3 p-3 rounded border transition-colors cursor-pointer ${decision === "approve" ? "bg-emerald-50 border-emerald-200" : "bg-white hover:bg-slate-50"} ${isReadOnly || isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}>
+                        <input type="radio" name="decision" value="approve" checked={decision === "approve"} disabled={isReadOnly || isSubmitting} onChange={(e) => setDecision("approve")} className="mt-1" />
+                        <div className="font-medium">
                             <span className="text-emerald-700 font-bold block mb-1">Aprovar Devolução</span>
                             <span className="text-gray-500 text-xs font-normal">O extorno seguirá o processo normal sem suspeitas fundadas.</span>
-                        </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 rounded border bg-red-50/30 hover:bg-red-50/50 transition-colors">
-                        <RadioGroupItem value="reject" id="r-reject" />
-                        <Label htmlFor="r-reject" className="font-medium cursor-pointer">
+                        </div>
+                    </label>
+                    <label className={`flex items-start space-x-3 p-3 rounded border transition-colors cursor-pointer ${decision === "reject" ? "bg-red-50 border-red-200" : "bg-white hover:bg-slate-50"} ${isReadOnly || isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}>
+                        <input type="radio" name="decision" value="reject" checked={decision === "reject"} disabled={isReadOnly || isSubmitting} onChange={(e) => setDecision("reject")} className="mt-1" />
+                        <div className="font-medium">
                             <span className="text-red-700 font-bold block mb-1">Negar (Risco de Fraude)</span>
                             <span className="text-gray-500 text-xs font-normal">Ação bloqueadora por suspeita de fraude baseada no Score e motivos da IA.</span>
-                        </Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 rounded border bg-amber-50/30 hover:bg-amber-50/50 transition-colors">
-                        <RadioGroupItem value="request_evidence" id="r-evidence" />
-                        <Label htmlFor="r-evidence" className="font-medium cursor-pointer">
+                        </div>
+                    </label>
+                    <label className={`flex items-start space-x-3 p-3 rounded border transition-colors cursor-pointer ${decision === "request_evidence" ? "bg-amber-50 border-amber-200" : "bg-white hover:bg-slate-50"} ${isReadOnly || isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}>
+                        <input type="radio" name="decision" value="request_evidence" checked={decision === "request_evidence"} disabled={isReadOnly || isSubmitting} onChange={(e) => setDecision("request_evidence")} className="mt-1" />
+                        <div className="font-medium">
                             <span className="text-amber-700 font-bold block mb-1">Pedir Evidência</span>
                             <span className="text-gray-500 text-xs font-normal">Sinaliza alerta amarelo e pausa a análise exigindo fotos ou informações do cliente.</span>
-                        </Label>
-                    </div>
-                </RadioGroup>
+                        </div>
+                    </label>
+                </div>
 
                 <div className="space-y-3">
-                    <Label htmlFor="note" className="text-gray-700 font-semibold">
+                    <label htmlFor="note" className="text-sm font-medium leading-none text-gray-700">
                         Anotações da Decisão {decision !== "approve" && <span className="text-red-500">*</span>}
-                    </Label>
-                    <Textarea
+                    </label>
+                    <textarea
                         id="note"
                         placeholder="Para negar ou pausar, relate obrigatoriamente a razão identificada..."
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         disabled={isReadOnly || isSubmitting}
-                        className="min-h-[120px]"
+                        className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <p className="text-[11px] text-gray-400">
                         Esta nota será gravada publicamente na trilha de auditoria do Tenant atrelada ao seu usuário.
@@ -138,16 +128,15 @@ export default function CaseDecisionClient({ id, initialData }: { id: string, in
                 </div>
 
                 {!isReadOnly && (
-                    <Button
-                        size="lg"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                    <button
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-11 px-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white"
                         disabled={isSubmitting}
                         onClick={handleSubmit}
                     >
                         {isSubmitting ? "Protegendo registro..." : "Gravar Decisão (Auditoria Ativa)"}
-                    </Button>
+                    </button>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 }
