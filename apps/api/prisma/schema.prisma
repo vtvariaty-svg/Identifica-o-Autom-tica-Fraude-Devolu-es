@@ -179,7 +179,7 @@ model Return {
   order            Order             @relation(fields: [order_id], references: [id], onDelete: Cascade)
   connector        Connector?        @relation(fields: [connector_id], references: [id], onDelete: SetNull)
   items            ReturnItem[]
-  fraudScore       FraudScore?
+  scores           FraudScore[]
   decision         Decision?
   featuresSnapshot FeaturesSnapshot[]
 
@@ -207,25 +207,6 @@ model ReturnItem {
 
   @@index([tenant_id, return_id])
   @@map("return_items")
-}
-
-model FraudScore {
-  id            String    @id @default(uuid()) @db.Uuid
-  tenant_id     String    @db.Uuid
-  return_id     String    @unique @db.Uuid
-  model_version String?
-  score         Decimal?  @db.Decimal(5, 4)
-  risk_level    String?
-  explanation   Json?
-  computed_at   DateTime?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now()) @updatedAt
-
-  tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
-
-  @@index([tenant_id, return_id])
-  @@map("fraud_scores")
 }
 
 model Decision {
