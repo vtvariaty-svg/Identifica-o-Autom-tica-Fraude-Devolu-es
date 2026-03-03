@@ -1,5 +1,9 @@
-import { Job } from "bullmq";
+import { Job, Queue } from "bullmq";
 import { PrismaClient } from "@prisma/client";
+import IORedis from "ioredis";
+
+const connection = new IORedis(process.env.REDIS_URL || "", { maxRetriesPerRequest: null });
+const testQueue = new Queue("jobs", { connection } as any);
 
 const prisma = new PrismaClient();
 
@@ -133,6 +137,9 @@ export default async function computeFeaturesForReturnJob(job: Job) {
         } as any
     });
 
-    console.log(`[Worker] snapshot saved for returnId ${returnId} (tenantId ${tenantId})`);
+    // 4. Enqueue Risk Score Automation
+    await testQueue.add("compute_risk_score_for_return", { tenantId, returnId });
+    console.log(`[Worker] Triggered risk score computation for returnId ${returnId}`);
+
     return { success: true, features };
 }

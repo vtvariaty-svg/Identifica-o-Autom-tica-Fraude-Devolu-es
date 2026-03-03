@@ -201,6 +201,32 @@ Dentro do dashboard do Render, acesse o serviço do **Worker**:
 
 Isso valida todo o ciclo assíncrono entre banco, worker e front-end!
 
+---
+
+## Etapa 5: Motor de Risco (IA MVP) e Explicabilidade
+
+Nesta etapa acoplamos ao pipeline de features o nosso **Motor de Risco** que determina uma nota de fraude real (0 a 100) baseada nos dados do *FeaturesSnapshot*.
+
+### Como Validar o fluxo de Explicabilidade no Render
+1. Acesse o seu `WEB_BASE_URL` (Painel Web no Render) e faça Login.
+2. Certifique-se de que já importou um CSV de Pedidos e Devoluções (Etapa 3) para ter dados no banco.
+3. Abra o Menu **Devoluções** (`/app/returns`). Ali, você notará as novas colunas: **Score IA** e **Tags (Motivos)**. Inicialmente dirão _"Sem score"_ ou _"—"_.
+4. Entre em uma Devolução (Clique em *Ver Alertas*).
+5. Se as _Features_ ainda não constarem como calculadas ali, clique para **Recalcular Sinais**.
+6. Agora, atente-se ao Card "Risco (IA MVP)". Se disser "Indisponível", clique em **Recalcular Score**.
+7. O front emitirá um Job para a fila, o Worker o processará e gerará as pontuações. A página se atualizará automaticamente!
+8. **Analise o resultado final:** 
+   - A nota central indicará um Score entre 0 e 100 e uma % de Confiança (Se bater `80` a cor do badge vai pra vermelho).
+   - O painel lateral explicará o "Por Quê?" detalhando *Reasons* (ex: "Devolução na primeira semana"), a *Severidade* e as **Evidências matemáticas**.
+
+**Dica de Logs:** Volte ao painel do Render > Worker. Você deve ver o log: `[Worker] fraud_score inserted for returnId...`
+
+### Endpoint Oculto de Re-Cálculo de Fraude (Testes via cURL)
+```bash
+POST https://API_BASE_URL/returns/SEU_ID/compute-score
+Cookie: token=SEU_TOKEN
+```
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:

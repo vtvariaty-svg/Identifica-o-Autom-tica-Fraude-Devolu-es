@@ -265,6 +265,24 @@ model FeaturesSnapshot {
   @@map("features_snapshot")
 }
 
+model FraudScore {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenant_id      String   @db.Uuid
+  return_id      String   @db.Uuid
+  model_version  String   @default("rules_v1")
+  score          Int
+  confidence     Decimal  @db.Decimal(5, 4)
+  reasons_json   Json
+  computed_at    DateTime @default(now())
+
+  tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, return_id, computed_at(sort: Desc)])
+  @@index([tenant_id, computed_at(sort: Desc)])
+  @@map("fraud_scores")
+}
+
 model Connector {
   id         String   @id @default(uuid()) @db.Uuid
   tenant_id  String   @db.Uuid

@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 import IORedis from "ioredis";
 import importCsvJob from "./jobs/import_csv.job";
 import computeFeaturesForReturnJob from "./jobs/compute_features_for_return.job";
+import computeRiskScoreForReturnJob from "./jobs/compute_risk_score_for_return.job";
 
 dotenv.config();
 
@@ -40,6 +41,10 @@ async function start() {
 
             if (job.name === "compute_features_for_return") {
                 return await computeFeaturesForReturnJob(job);
+            }
+
+            if (job.name === "compute_risk_score_for_return") {
+                return await computeRiskScoreForReturnJob(job);
             }
 
             console.log(`[Worker] Data:`, job.data);

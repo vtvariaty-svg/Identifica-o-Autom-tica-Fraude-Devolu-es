@@ -93,5 +93,19 @@ Content-Type: application/json
 ### 8. Scope Check (must happen after successful login/select)
 GET {{baseUrl}}/tenant/scope-check
 
-### 9. Logout
-POST {{baseUrl}}/auth/logout
+
+// ==========================================
+// STEP 5: Risk Engine MVP (Score 0-100)
+// Verify Explainability via endpoints (Render)
+// ==========================================
+
+### 1) Get Returns with Score & Tags
+GET {{baseUrl}}/returns
+# Will now include `latest_score` and `latest_reasons_tags`
+
+### 2) Get Return Details with Full AI Explainability
+GET {{baseUrl}}/returns/REPLACE_WITH_RETURN_ID/details
+
+### 3) Trigger Score Re-computation (Background Job)
+# Note: Ensure you uploaded features for this ID first.
+POST {{baseUrl}}/returns/REPLACE_WITH_RETURN_ID/compute-score

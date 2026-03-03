@@ -9,9 +9,9 @@ export default function ReturnDetailsClient({ id, initialData }: { id: string, i
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { return: returnObj, order, features, featuresComputedAt, featuresStatus } = data;
+    const { return: returnObj, order, features, featuresComputedAt, featuresStatus, score, reasons, scoreStatus } = data;
 
-    const handleRecompute = async () => {
+    const handleRecomputeFeatures = async () => {
         setLoading(true);
         setError(null);
         try {
@@ -45,6 +45,47 @@ export default function ReturnDetailsClient({ id, initialData }: { id: string, i
                     clearInterval(poll);
                     setLoading(false);
                     setError("Timeout ao processar sinais. Recarregue a página mais tarde.");
+                }
+            }, 2000);
+
+        } catch (err: any) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
+    const handleRecomputeScore = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await apiFetch(`/returns/${id}/compute-score`, { method: "POST" });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Erro ao acionar re-cálculo de score.");
+            }
+
+            let attempts = 0;
+            const poll = setInterval(async () => {
+                attempts++;
+                try {
+                    const checkRes = await apiFetch(`/returns/${id}/details`);
+                    if (checkRes.ok) {
+                        const checkData = await checkRes.json();
+                        if (
+                            checkData.scoreStatus === "ok" &&
+                            (!score || checkData.score.computedAt !== score.computedAt)
+                        ) {
+                            setData(checkData);
+                            clearInterval(poll);
+                            setLoading(false);
+                        }
+                    }
+                } catch (e) { }
+
+                if (attempts >= 10) {
+                    clearInterval(poll);
+                    setLoading(false);
+                    setError("Timeout ao processar score. Recarregue a página mais tarde.");
                 }
             }, 2000);
 
@@ -129,12 +170,12 @@ export default function ReturnDetailsClient({ id, initialData }: { id: string, i
                             </div>
                         </div>
                         <button
-                            onClick={handleRecompute}
+                            onClick={handleRecomputeFeatures}
                             disabled={loading}
-                            className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 border px-4 py-2 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border px-4 py-2 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                            {loading ? "Calculando..." : "Recalcular Sinais"}
+                            Atualizar Sinais
                         </button>
                     </div>
 
@@ -205,7 +246,99 @@ export default function ReturnDetailsClient({ id, initialData }: { id: string, i
                             </div>
                         </div>
                     )}
+                </div>
 
+                {/* Score / AI Risk Section */}
+                <div className="bg-card shadow-sm rounded-lg border border-border overflow-hidden">
+                    <div className="p-6 border-b border-border flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/10">
+                        <div className="flex items-center gap-3">
+                            <ShieldAlert className={`w-8 h-8 ${scoreStatus === "ok" ? (score.score >= 80 ? "text-red-500" : score.score >= 40 ? "text-amber-500" : "text-green-500") : "text-muted-foreground"}`} />
+                            <div>
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded ml-2 align-middle">Beta</span>
+                                    Risco (IA MVP)
+                                </h2>
+                                <p className="text-xs text-muted-foreground">
+                                    {scoreStatus === "missing_features" ? "Sem features prontas para calcular." :
+                                        scoreStatus === "missing_score" ? "Score ainda não foi calculado." :
+                                            `Motor: ${score.modelVersion} | Atualizado: ${new Date(score.computedAt).toLocaleString("pt-BR")}`
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleRecomputeScore}
+                            disabled={loading || scoreStatus === "missing_features"}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                            {loading ? "Processando..." : "Recalcular Score"}
+                        </button>
+                    </div>
+
+                    <div className="p-6">
+                        {scoreStatus === "missing_features" || scoreStatus === "missing_score" ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                                <AlertCircle className="w-10 h-10 mb-3 opacity-50 text-amber-500" />
+                                <p className="font-medium text-foreground">Score indisponível.</p>
+                                <p className="text-sm">
+                                    {scoreStatus === "missing_features" ? "Sinais precisam ser gerados primeiro no card acima." : "Clique em Recalcular Score para acionar o motor de risco."}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {/* Score Badge */}
+                                <div className="flex flex-col items-center justify-center p-6 border border-border rounded-lg bg-background">
+                                    <p className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wider">Score Fraude</p>
+                                    <div className={`w-32 h-32 rounded-full border-8 flex items-center justify-center ${score.score >= 80 ? "border-red-500 text-red-600 dark:text-red-400" :
+                                        score.score >= 40 ? "border-amber-500 text-amber-600 dark:text-amber-400" :
+                                            "border-green-500 text-green-600 dark:text-green-400"
+                                        }`}>
+                                        <span className="text-4xl font-black">{score.score}</span>
+                                    </div>
+                                    <p className="mt-4 text-sm font-semibold text-foreground">
+                                        Confiança: <span className="font-mono bg-muted px-1 py-0.5 rounded">{(score.confidence * 100).toFixed(1)}%</span>
+                                    </p>
+                                </div>
+
+                                {/* Reasons/Explainability */}
+                                <div className="md:col-span-2">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                                        Motivos & Evidências (Explicabilidade)
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {reasons.map((r: any, idx: number) => (
+                                            <div key={idx} className={`p-4 rounded-lg border flex flex-col gap-2 ${r.severity === "high" ? "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-900/10" :
+                                                r.severity === "medium" ? "border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-900/10" :
+                                                    "border-border bg-muted/30"
+                                                }`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${r.severity === "high" ? "bg-red-500" : r.severity === "medium" ? "bg-amber-500" : "bg-blue-500"
+                                                            }`}></span>
+                                                        <span className="font-semibold text-foreground text-sm">{r.label}</span>
+                                                        <span className="font-mono text-[10px] text-muted-foreground">{r.code}</span>
+                                                    </div>
+                                                    {r.points > 0 && (
+                                                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-background border border-border">
+                                                            +{r.points} pts
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded border border-border/50 font-mono mt-1 w-full overflow-x-auto">
+                                                    {Object.entries(r.evidence).map(([k, v]) => (
+                                                        <span key={k} className="mr-3">
+                                                            <span className="opacity-70">{k}:</span> <strong className="opacity-100">{String(v)}</strong>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

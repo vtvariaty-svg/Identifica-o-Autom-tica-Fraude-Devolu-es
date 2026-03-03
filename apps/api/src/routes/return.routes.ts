@@ -20,15 +20,13 @@ export const returnRoutes: FastifyPluginAsync = async (app) => {
             where: { tenant_id: tenantId },
             skip: offset,
             take: limit,
-            select: {
-                id: true,
-                external_id: true,
-                status: true,
-                order_id: true,
-                refund_amount_cents: true,
-                requested_at: true,
-                created_at: true,
-            },
+            include: {
+                order: { select: { external_id: true } },
+                scores: {
+                    orderBy: { computed_at: "desc" },
+                    take: 1
+                }
+            } as any,
             orderBy: { created_at: "desc" },
         });
 
@@ -36,8 +34,26 @@ export const returnRoutes: FastifyPluginAsync = async (app) => {
             where: { tenant_id: tenantId },
         });
 
+        const mappedReturns = returns.map((ret: any) => {
+            const latestScore = ret.scores?.[0] || null;
+            return {
+                id: ret.id,
+                tenant_id: ret.tenant_id,
+                external_id: ret.external_id,
+                status: ret.status,
+                reason: ret.reason,
+                refund_amount_cents: ret.refund_amount_cents,
+                order_id: ret.order_id,
+                requested_at: ret.requested_at,
+                created_at: ret.created_at,
+                latest_score: latestScore?.score || null,
+                latest_reasons_tags: latestScore ? (latestScore.reasons_json?.slice(0, 3).map((r: any) => r.label) || []) : [],
+                latest_confidence: latestScore ? Number(latestScore.confidence) : null,
+            };
+        });
+
         return reply.send({
-            data: returns,
+            data: mappedReturns,
             meta: {
                 total,
                 limit,

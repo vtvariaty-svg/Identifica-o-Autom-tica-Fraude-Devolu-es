@@ -43,7 +43,9 @@ export default async function ReturnsListPage() {
                             <th className="px-6 py-4 font-semibold">Status</th>
                             <th className="px-6 py-4 font-semibold">Motivo</th>
                             <th className="px-6 py-4 font-semibold">Valor</th>
-                            <th className="px-6 py-4 font-semibold">Data da Solicitação</th>
+                            <th className="px-6 py-4 font-semibold">Score IA</th>
+                            <th className="px-6 py-4 font-semibold">Tags (Motivos)</th>
+                            <th className="px-6 py-4 font-semibold">Data da Solicit.</th>
                             <th className="px-6 py-4 text-center font-semibold">Investigar</th>
                         </tr>
                     </thead>
@@ -66,6 +68,31 @@ export default async function ReturnsListPage() {
                                     <td className="px-6 py-4 text-muted-foreground">{ret.reason || "-"}</td>
                                     <td className="px-6 py-4 font-semibold">
                                         {(ret.refund_amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {ret.latest_score !== null ? (
+                                            <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${ret.latest_score >= 80 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200" :
+                                                    ret.latest_score >= 40 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200" :
+                                                        "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-200"
+                                                }`}>
+                                                {ret.latest_score} / 100
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs italic">Sem score</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 max-w-xs">
+                                        <div className="flex flex-wrap gap-1">
+                                            {ret.latest_reasons_tags && ret.latest_reasons_tags.length > 0 ? (
+                                                ret.latest_reasons_tags.map((tag: string, i: number) => (
+                                                    <span key={i} className="text-[10px] bg-secondary/50 text-secondary-foreground px-2 py-0.5 rounded border border-border">
+                                                        {tag}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">—</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground">
                                         {ret.requested_at ? new Date(ret.requested_at).toLocaleDateString("pt-BR") : new Date(ret.created_at).toLocaleDateString("pt-BR")}
