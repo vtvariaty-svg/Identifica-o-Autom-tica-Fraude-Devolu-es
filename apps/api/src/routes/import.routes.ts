@@ -30,7 +30,7 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
             return reply.status(400).send({ error: `Invalid entityType. Must be one of: ${validEntities.join(", ")}` });
         }
 
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         // 1. Create ImportRun with file embedded
         const importRun = await prisma.importRun.create({
@@ -55,7 +55,7 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
 
     // Endpoint 2: List Import History
     app.get("/", async (request, reply) => {
-        const { tenantId } = request.auth!;
+        const tenantId = request.auth!.tenantId!;
 
         const runs = await prisma.importRun.findMany({
             where: { tenant_id: tenantId },
