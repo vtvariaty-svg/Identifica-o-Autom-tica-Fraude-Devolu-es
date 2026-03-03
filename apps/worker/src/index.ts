@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import IORedis from "ioredis";
 import importCsvJob from "./jobs/import_csv.job";
+import computeFeaturesForReturnJob from "./jobs/compute_features_for_return.job";
 
 dotenv.config();
 
@@ -35,6 +36,10 @@ async function start() {
 
             if (job.name === "import_csv") {
                 return await importCsvJob(job);
+            }
+
+            if (job.name === "compute_features_for_return") {
+                return await computeFeaturesForReturnJob(job);
             }
 
             console.log(`[Worker] Data:`, job.data);

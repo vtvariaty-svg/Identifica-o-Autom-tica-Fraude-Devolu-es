@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { usePathname } from "next/navigation";
-import { LogOut, Home, Building, ShieldAlert, UploadCloud } from "lucide-react";
+import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, tenant, logout } = useAuth();
@@ -12,8 +12,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const navLinks = [
         { name: "Início", href: "/app", icon: Home },
         { name: "Tenants", href: "/app/tenants", icon: Building },
-        { name: "Anti-Fraude", href: "/app/fraude", icon: ShieldAlert },
+        { name: "Devoluções", href: "/app/returns", icon: ShoppingCart },
         { name: "Importações CSV", href: "/app/imports", icon: UploadCloud },
+        { name: "Configurações (Anti-Fraude)", href: "/app/fraude", icon: ShieldAlert },
     ];
 
     return (
@@ -27,24 +28,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <nav className="flex-1 overflow-y-auto py-4">
-                    <ul className="space-y-1">
+                    <nav className="space-y-1">
                         {navLinks.map((link) => {
-                            const active = pathname === link.href;
                             const Icon = link.icon;
                             return (
-                                <li key={link.href}>
-                                    <Link
-                                        href={link.href}
-                                        className={`flex items-center px-6 py-2.5 text-sm font-medium ${active ? "text-blue-600 bg-blue-50 border-r-4 border-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        <Icon className="mr-3 h-5 w-5" />
-                                        {link.name}
-                                    </Link>
-                                </li>
+                                <Link
+                                    key={link.name}
+                                    href={link.href}
+                                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${pathname === link.href || (link.href !== "/app" && pathname.startsWith(link.href))
+                                            ? "bg-accent text-accent-foreground"
+                                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                        }`}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    {link.name}
+                                </Link>
                             );
                         })}
-                    </ul>
+                    </nav>
                 </nav>
 
                 <div className="p-4 border-t border-gray-200">

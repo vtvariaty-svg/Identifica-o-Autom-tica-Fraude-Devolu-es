@@ -254,14 +254,14 @@ model FeaturesSnapshot {
   tenant_id      String   @db.Uuid
   return_id      String   @db.Uuid
   schema_version String   @default("v1")
-  features       Json
-  created_at     DateTime @default(now())
+  features_json  Json
+  computed_at    DateTime @default(now())
   updated_at     DateTime @default(now()) @updatedAt
 
   tenant    Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   returnObj Return @relation(fields: [return_id], references: [id], onDelete: Cascade)
 
-  @@index([tenant_id, return_id])
+  @@index([tenant_id, return_id, computed_at(sort: Desc)])
   @@map("features_snapshot")
 }
 

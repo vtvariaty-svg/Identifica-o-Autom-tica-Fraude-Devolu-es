@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes";
 import tenantRoutes from "./routes/tenant.routes";
 import orderRoutes from "./routes/order.routes";
 import returnRoutes from "./routes/return.routes";
+import featuresRoutes from "./routes/features.routes";
 import importRoutes from "./routes/import.routes";
 
 const server = Fastify({
@@ -34,6 +35,7 @@ server.register(authRoutes, { prefix: "/auth" });
 server.register(tenantRoutes, { prefix: "/tenants" });
 server.register(orderRoutes, { prefix: "/orders" });
 server.register(returnRoutes, { prefix: "/returns" });
+server.register(featuresRoutes, { prefix: "/returns" });
 server.register(importRoutes, { prefix: "/imports" });
 
 server.setErrorHandler((error, request, reply) => {

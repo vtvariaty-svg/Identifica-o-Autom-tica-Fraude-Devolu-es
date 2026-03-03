@@ -156,7 +156,50 @@ Esta etapa consolida o suporte para onboarding rápido (Fallback) via importaç�
 - O worker realiza leitura assíncrona. 
 - Suba o arquivo `samples/csv/orders.sample.csv`.
 - Você observará um pedido falso e uma linha vazia (causando um erro na validação de dependências). No fim, a listagem mostrará 1 sucesso e 1 erro justificado.
-- Verifique a UI em `/app/imports/[id]` para ler os erros linha-a-linha parseados!
+
+---
+
+## Etapa 4: Engenharia de Features (Sinais Anti-Fraude Core)
+
+Esta etapa calcula determinicamente e materializa os alertas cruciais em torno de cada Devolução, rodando via Background Worker (BullMQ) e consumindo no banco de dados via _FeaturesSnapshot_.
+
+### Como Validar 100% no Render (Sem Localhost)
+
+Como sua stack agora é gerenciada majoritariamente no Render, siga este roteiro simplificado para validar sem depender de ferramentas locais:
+
+**A) Descubra suas URLs Púbicas no Render Dashboard**
+- `API_BASE_URL` = (Ex: https://api-antifraude-123.onrender.com)
+- `WEB_BASE_URL` = (Ex: https://web-antifraude-123.onrender.com)
+
+**B) Processo Automático pela Interface Web (Recomendado)**
+1. Acesse o seu `WEB_BASE_URL` e faça o Login.
+2. Navegue até **Importações CSV** no menu lateral.
+3. Suba um CSV válido de **Pedidos (Orders)** e depois um de **Devoluções (Returns)** (você pode usar os do repositório em `samples/csv/`).
+4. Navegue até **Devoluções** pela barra lateral.
+5. Clique em **Ver Alertas** numa devolução recente.
+6. A página mostrará os alertas ("Sinais não computados").
+7. Clique em **Recalcular Sinais**. O Frontend acionará a API, enfileirará o Worker e fará "polling" até atualizar a tela com os sinais calculados!
+
+**C) Validando pelo cURL via Terminal**
+*(Substitua `API_BASE_URL`, `TOKEN` e `ID_DA_DEVOLUCAO`)*
+```bash
+# 1. Enfileirar o re-cálculo de sinais (Apenas para Owner/Admin)
+curl -X POST \
+  https://API_BASE_URL/returns/ID_DA_DEVOLUCAO/compute-features \
+  -H "Cookie: token=SEU_TOKEN_AQUI"
+
+# 2. Resgatar Detalhes e Sinais
+curl -X GET \
+  https://API_BASE_URL/returns/ID_DA_DEVOLUCAO/details \
+  -H "Cookie: token=SEU_TOKEN_AQUI"
+```
+
+**D) Verificando os Logs do Worker**
+Dentro do dashboard do Render, acesse o serviço do **Worker**:
+- Procure por `[Worker] Started compute_features_for_return for Return...`
+- Procure por `[Worker] snapshot saved for returnId...`
+
+Isso valida todo o ciclo assíncrono entre banco, worker e front-end!
 
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
