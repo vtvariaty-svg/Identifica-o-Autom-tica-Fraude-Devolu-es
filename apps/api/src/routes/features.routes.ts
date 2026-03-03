@@ -24,7 +24,11 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
                 scores: {   // Relationship not defined on Prisma yet, will fetch manually
                     orderBy: { computed_at: "desc" },
                     take: 1
-                }
+                } as any,
+                decision: {
+                    orderBy: { decided_at: "desc" },
+                    take: 1
+                } as any
             } as any
         });
 
@@ -49,6 +53,8 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
             scoreStatus = "missing_score";
         }
 
+        const latestDecision = (returnDetails as any).decision?.[0] || null;
+
         return reply.send({
             return: returnDetails,
             order: returnDetails.order,
@@ -63,6 +69,13 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
             } : null,
             reasons: latestScore ? (latestScore as any).reasons_json : [],
             scoreStatus,
+            latestDecision: latestDecision ? {
+                decision: latestDecision.decision,
+                note: latestDecision.reason,
+                decidedAt: latestDecision.decided_at,
+                decidedByUserId: latestDecision.decided_by_user_id
+            } : null,
+            decisionStatus: latestDecision ? "resolved" : "open"
         });
     });
 

@@ -11,6 +11,7 @@ import orderRoutes from "./routes/order.routes";
 import returnRoutes from "./routes/return.routes";
 import featuresRoutes from "./routes/features.routes";
 import importRoutes from "./routes/import.routes";
+import casesRoutes from "./routes/cases.routes";
 
 const server = Fastify({
     logger: {
@@ -37,6 +38,7 @@ server.register(orderRoutes, { prefix: "/orders" });
 server.register(returnRoutes, { prefix: "/returns" });
 server.register(featuresRoutes, { prefix: "/returns" });
 server.register(importRoutes, { prefix: "/imports" });
+server.register(casesRoutes, { prefix: "/cases" });
 
 server.setErrorHandler((error, request, reply) => {
     server.log.error(error);

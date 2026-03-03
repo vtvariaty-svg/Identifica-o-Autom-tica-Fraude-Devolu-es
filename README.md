@@ -227,6 +227,44 @@ POST https://API_BASE_URL/returns/SEU_ID/compute-score
 Cookie: token=SEU_TOKEN
 ```
 
+---
+
+## Etapa 6: Workflow Antifraude (Fila de Casos)
+
+A etapa final do núcleo operacional amarra o Score de Risco à tomada de decisão humana, auditando todos os vereditos num funil focado.
+
+### Como Validar o fluxo de Operações no Render
+1. Acesse o seu `WEB_BASE_URL` (Painel Web no Render) e faça Login como **Owner** ou **Admin**.
+2. Certifique-se de ter importado um CSV (Etapa 3) e gerado sinais/scores (Etapa 4/5) em algumas mercadorias.
+3. No Menu Lateral, perceba a aba nova **Fila de Casos**. Clique nela.
+4. A lista exibirá *somente devoluções abertas* ordenadas pelas piores notas de Fraude e Valores mais altos. (Você não verá as decisões já resolvidas aqui).
+5. Clique em **Abrir Caso** numa das linhas com Score vermelho/alto.
+6. A tela carrega todos os motivos apontados pela IA na esquerda e na direita o novo widget **Decisão Operacional**.
+7. Teste a Restrição RBAC (se puder logar como Analyst depois, este painel só permite "Leitura").
+8. Selecione **Negar** (Fraude identificada) ou **Pedir Evidência**. Preencha no mínimo 5 caracteres na Nota de Auditoria Obrigatória e clique em **Gravar Decisão (Auditoria Ativa)**.
+9. O sistema disparará um Toast de Sucesso e lhe encaminhará devolta para a `/app/cases`.
+10. Confirme que o caso que você testou **não aparece mais na fila de pendientes!**
+
+**Testando a Trilha de Auditoria (Logs):**
+- A API (não o Worker, dessa vez a API bloqueia síncronamente) vai carimbar no banco a sua ação: `[API] decision criadas...`
+- Toda ação ali escreve silenciosamente na Database nativa `AuditLog` o payload de `{ returnId, decision, noteLength, scoreAtDecision }` protegendo quem negou o que e o porquê.
+
+### Endpoint Direto de Casos (Testes via cURL)
+Listagem direta das pendências:
+```bash
+GET https://API_BASE_URL/cases
+Cookie: token=SEU_TOKEN
+```
+
+Aprovar/Negar Case:
+```bash
+POST https://API_BASE_URL/cases/SEU_ID/decision
+Cookie: token=SEU_TOKEN
+Content-Type: application/json
+
+{ "decision": "reject", "note": "Recusado confome regras" }
+```
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:

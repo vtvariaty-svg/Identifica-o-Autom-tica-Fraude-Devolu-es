@@ -212,7 +212,7 @@ model ReturnItem {
 model Decision {
   id                 String   @id @default(uuid()) @db.Uuid
   tenant_id          String   @db.Uuid
-  return_id          String   @unique @db.Uuid
+  return_id          String   @db.Uuid
   decided_by_user_id String?  @db.Uuid
   decision           String
   reason             String?

@@ -109,3 +109,25 @@ GET {{baseUrl}}/returns/REPLACE_WITH_RETURN_ID/details
 ### 3) Trigger Score Re-computation (Background Job)
 # Note: Ensure you uploaded features for this ID first.
 POST {{baseUrl}}/returns/REPLACE_WITH_RETURN_ID/compute-score
+
+###
+# -------------------------------------------------------------
+# ETAPA 6: WORKFLOW ANTIFRAUDE (Coda de Casos e Decisoes)
+# -------------------------------------------------------------
+
+### 1) List Open Cases (Returns awaiting decision)
+# Sorted automatically by highest Score then largest value
+GET {{baseUrl}}/cases
+Cookie: token={{USER_TOKEN}}
+
+### 2) Decide a Case
+# Resolves a case and drops it from the Queue. Requires role: admin/owner
+# Allowed decisions: "approve", "reject", "request_evidence"
+POST {{baseUrl}}/cases/REPLACE_WITH_RETURN_ID/decision
+Cookie: token={{USER_TOKEN}}
+Content-Type: application/json
+
+{
+    "decision": "reject",
+    "note": "Fraud confirmed by high AI score on fast return policy abuse"
+}

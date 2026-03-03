@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { usePathname } from "next/navigation";
-import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart } from "lucide-react";
+import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart, ShieldCheck } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, tenant, logout } = useAuth();
@@ -14,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         { name: "Tenants", href: "/app/tenants", icon: Building },
         { name: "Devoluções", href: "/app/returns", icon: ShoppingCart },
         { name: "Importações CSV", href: "/app/imports", icon: UploadCloud },
+        { name: "Fila de Casos", href: "/app/cases", icon: ShieldCheck }, // Added this line
         { name: "Configurações (Anti-Fraude)", href: "/app/fraude", icon: ShieldAlert },
     ];
 
@@ -36,8 +37,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     key={link.name}
                                     href={link.href}
                                     className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${pathname === link.href || (link.href !== "/app" && pathname.startsWith(link.href))
-                                            ? "bg-accent text-accent-foreground"
-                                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                        ? "bg-accent text-accent-foreground"
+                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                         }`}
                                 >
                                     <Icon className="h-4 w-4" />
