@@ -70,7 +70,7 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
     app.post("/:id/compute-features", async (request, reply) => {
         // Enforce RBAC manually for OWNER or ADMIN without relying on roleGuard helper to simplify
         const userRole = request.auth!.role;
-        if (userRole !== "OWNER" && userRole !== "ADMIN") {
+        if (userRole !== "owner" && userRole !== "admin") {
             return reply.status(403).send({ error: "Insufficient privileges to compute features" });
         }
 
@@ -99,7 +99,7 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
     // Endpoint 3: Compute Score Only (Queue Job)
     app.post("/:id/compute-score", async (request, reply) => {
         const userRole = request.auth!.role;
-        if (userRole !== "OWNER" && userRole !== "ADMIN") {
+        if (userRole !== "owner" && userRole !== "admin") {
             return reply.status(403).send({ error: "Insufficient privileges to compute scores" });
         }
 
