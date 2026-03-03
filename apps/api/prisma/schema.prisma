@@ -180,7 +180,7 @@ model Return {
   connector        Connector?        @relation(fields: [connector_id], references: [id], onDelete: SetNull)
   items            ReturnItem[]
   scores           FraudScore[]
-  decision         Decision?
+  decisions        Decision[]
   featuresSnapshot FeaturesSnapshot[]
 
   @@index([tenant_id, order_id])

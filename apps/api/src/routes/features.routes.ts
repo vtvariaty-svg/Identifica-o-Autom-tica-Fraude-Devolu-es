@@ -25,7 +25,7 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
                     orderBy: { computed_at: "desc" },
                     take: 1
                 } as any,
-                decision: {
+                decisions: {
                     orderBy: { decided_at: "desc" },
                     take: 1
                 } as any
@@ -53,7 +53,7 @@ export const featuresRoutes: FastifyPluginAsync = async (app) => {
             scoreStatus = "missing_score";
         }
 
-        const latestDecision = (returnDetails as any).decision?.[0] || null;
+        const latestDecision = (returnDetails as any).decisions?.[0] || null;
 
         return reply.send({
             return: returnDetails,
