@@ -185,6 +185,8 @@ model Return {
 
   @@index([tenant_id, order_id])
   @@index([tenant_id, external_id])
+  @@index([tenant_id, requested_at])
+  @@index([tenant_id, created_at])
   @@map("returns")
 }
 
@@ -227,6 +229,7 @@ model Decision {
 
   @@index([tenant_id, return_id])
   @@index([tenant_id, decided_at])
+  @@index([tenant_id, return_id, decided_at(sort: Desc)])
   @@map("decisions")
 }
 

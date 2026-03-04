@@ -265,6 +265,27 @@ Content-Type: application/json
 { "decision": "reject", "note": "Recusado confome regras" }
 ```
 
+---
+
+## Etapa 7: Relatório Financeiro (ROI)
+
+Nesta etapa exibimos o valor do sistema antifraude através de Dashboards e Rankings focados em Perda Estimada vs. Fraude Evitada.
+
+### Como Validar o ROI no Render
+1. Faça login no seu `WEB_BASE_URL` (Painel Web no Render).
+2. Garanta que existam devoluções com Score gerado (Etapa 5) e casos operados/decididos (Etapa 6).
+3. No menu lateral, acesse **Dashboard ROI** (`/app/dashboard`).
+   - Verifique os cards: Perda Estimada (R$), Fraudes Evitadas (R$), Volume de Risco e Casos Pendentes.
+   - Troque o período (7d, 30d, 90d) para atestar os filtros.
+   - Valide se os Top Motivos de Alerta e Top Clientes com Risco estão listados abaixo.
+4. Acesse o menu **Relatórios** (`/app/reports`).
+   - Use os inputs de data `De/Ate` para selecionar um período e clique em **Aplicar Filtro**.
+   - Veja a tabela de Top 50 Sinais e a tabela de Top 50 Clientes detalhando devoluções aprovadas, pendentes e rejeitadas.
+5. Validação via HTTP direta na API:
+   - Dê um `GET` para `https://API_BASE_URL/metrics/summary?range=30d` no seu ambiente.
+   - `GET` para `https://API_BASE_URL/metrics/top-reasons?range=30d&limit=10`.
+   - Tudo formatado e Tenant-Scoped baseado no Authentication Token!
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:

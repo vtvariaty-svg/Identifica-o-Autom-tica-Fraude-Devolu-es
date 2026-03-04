@@ -131,3 +131,21 @@ Content-Type: application/json
     "decision": "reject",
     "note": "Fraud confirmed by high AI score on fast return policy abuse"
 }
+
+###
+# Passo 7 - Relatórios e ROI (Metrics)
+
+# GET /metrics/summary
+# Range: 7d, 30d, 90d
+GET {{API_BASE_URL}}/metrics/summary?range=30d
+Authorization: Bearer {{AUTH_TOKEN}}
+
+###
+# GET /metrics/top-reasons
+GET {{API_BASE_URL}}/metrics/top-reasons?range=30d&limit=10
+Authorization: Bearer {{AUTH_TOKEN}}
+
+###
+# GET /metrics/top-customers
+GET {{API_BASE_URL}}/metrics/top-customers?range=90d&limit=5
+Authorization: Bearer {{AUTH_TOKEN}}

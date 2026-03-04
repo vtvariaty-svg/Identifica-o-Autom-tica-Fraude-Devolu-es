@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { usePathname } from "next/navigation";
-import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart, ShieldCheck } from "lucide-react";
+import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart, ShieldCheck, TrendingUp, FileText } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, tenant, logout } = useAuth();
@@ -11,10 +11,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     const navLinks = [
         { name: "Início", href: "/app", icon: Home },
-        { name: "Tenants", href: "/app/tenants", icon: Building },
+        { name: "Dashboard ROI", href: "/app/dashboard", icon: TrendingUp },
+        { name: "Relatórios", href: "/app/reports", icon: FileText },
+        { name: "Fila de Casos", href: "/app/cases", icon: ShieldCheck },
         { name: "Devoluções", href: "/app/returns", icon: ShoppingCart },
         { name: "Importações CSV", href: "/app/imports", icon: UploadCloud },
-        { name: "Fila de Casos", href: "/app/cases", icon: ShieldCheck }, // Added this line
+        { name: "Tenants", href: "/app/tenants", icon: Building },
         { name: "Configurações (Anti-Fraude)", href: "/app/fraude", icon: ShieldAlert },
     ];
 
