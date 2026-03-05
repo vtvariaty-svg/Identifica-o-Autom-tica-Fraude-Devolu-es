@@ -131,6 +131,7 @@ model Order {
   items      OrderItem[]
   returns    Return[]
 
+  @@unique([tenant_id, external_id])
   @@index([tenant_id, external_id])
   @@index([tenant_id, customer_id])
   @@index([tenant_id, placed_at])
@@ -155,6 +156,7 @@ model OrderItem {
   order       Order        @relation(fields: [order_id], references: [id], onDelete: Cascade)
   returnItems ReturnItem[]
 
+  @@unique([tenant_id, external_id])
   @@index([tenant_id, order_id])
   @@map("order_items")
 }
@@ -184,6 +186,7 @@ model Return {
   decisions        Decision[]
   featuresSnapshot FeaturesSnapshot[]
 
+  @@unique([tenant_id, external_id])
   @@index([tenant_id, order_id])
   @@index([tenant_id, external_id])
   @@index([tenant_id, requested_at])
@@ -196,6 +199,7 @@ model ReturnItem {
   tenant_id     String   @db.Uuid
   return_id     String   @db.Uuid
   order_item_id String?  @db.Uuid
+  external_id   String?
   sku           String?
   product_name  String?
   quantity      Int      @default(1)
@@ -208,6 +212,7 @@ model ReturnItem {
   returnObj Return     @relation(fields: [return_id], references: [id], onDelete: Cascade)
   orderItem OrderItem? @relation(fields: [order_item_id], references: [id], onDelete: SetNull)
 
+  @@unique([tenant_id, external_id])
   @@index([tenant_id, return_id])
   @@map("return_items")
 }
@@ -338,6 +343,10 @@ model ImportRun {
   tenant       Tenant        @relation(fields: [tenant_id], references: [id])
   connector    Connector?    @relation(fields: [connector_id], references: [id])
   errors       ImportError[]
+
+  parent_import_run_id String?
+  parentRun            ImportRun?  @relation("ReprocessRun", fields: [parent_import_run_id], references: [id])
+  childRuns            ImportRun[] @relation("ReprocessRun")
 
   @@index([tenant_id, status])
   @@map("import_runs")

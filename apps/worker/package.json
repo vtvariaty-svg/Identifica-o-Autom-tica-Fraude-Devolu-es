@@ -9,6 +9,8 @@
     },
     "dependencies": {
         "@prisma/client": "^5.14.0",
+        "@sentry/node": "^10.42.0",
+        "@sentry/profiling-node": "^10.42.0",
         "bullmq": "^5.7.8",
         "csv-parse": "^6.1.0",
         "dotenv": "^16.4.5",

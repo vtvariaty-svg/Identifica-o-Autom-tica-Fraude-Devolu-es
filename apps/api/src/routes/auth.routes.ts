@@ -16,7 +16,14 @@ const COOKIE_OPTIONS = {
 };
 
 export default async function authRoutes(server: FastifyInstance) {
-    server.post("/auth/signup", async (request, reply) => {
+    server.post("/auth/signup", {
+        config: {
+            rateLimit: {
+                max: 10,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         const schema = z.object({
             email: z.string().email(),
             password: z.string().min(8),
@@ -91,7 +98,14 @@ export default async function authRoutes(server: FastifyInstance) {
         return { ok: true };
     });
 
-    server.post("/auth/login", async (request, reply) => {
+    server.post("/auth/login", {
+        config: {
+            rateLimit: {
+                max: 10,
+                timeWindow: '1 minute'
+            }
+        }
+    }, async (request, reply) => {
         const schema = z.object({
             email: z.string().email(),
             password: z.string(),

@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db";
-import { authGuard, tenantIsolationGuard } from "../plugins/auth";
+import { authGuard, tenantIsolationGuard, requireRole } from "../plugins/auth";
 import { testQueue } from "../queue";
 
 export const importRoutes: FastifyPluginAsync = async (app) => {
@@ -9,7 +9,11 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
     app.addHook("onRequest", tenantIsolationGuard);
 
     // Endpoint 1: Upload CSV and enqueue job
-    app.post("/csv", async (request, reply) => {
+    app.post("/csv", {
+        config: {
+            rateLimit: { max: 30, timeWindow: '1 minute' }
+        }
+    }, async (request, reply) => {
         const data = await request.file();
 
         if (!data) {
@@ -145,6 +149,62 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
             data: errors,
             meta: { total, limit, offset }
         });
+    });
+
+    // Endpoint 5: Reprocess an Import or Sync Run
+    app.post("/:id/reprocess", {
+        preHandler: [authGuard, tenantIsolationGuard, requireRole(["owner", "admin"])],
+        config: {
+            rateLimit: { max: 20, timeWindow: '1 minute' }
+        }
+    }, async (request, reply) => {
+        const paramsSchema = z.object({ id: z.string().uuid() });
+        const { id } = paramsSchema.parse(request.params);
+        const tenantId = request.auth!.tenantId!;
+
+        const originalRun = await prisma.importRun.findFirst({
+            where: { id, tenant_id: tenantId }
+        });
+
+        if (!originalRun) {
+            return reply.status(404).send({ error: "Import run not found" });
+        }
+
+        const newRun = await prisma.importRun.create({
+            data: {
+                tenant_id: tenantId,
+                connector_id: originalRun.connector_id,
+                source: originalRun.source,
+                status: "queued",
+                entity_type: originalRun.entity_type,
+                file_name: originalRun.file_name,
+                file_mime: originalRun.file_mime,
+                file_bytes: originalRun.file_bytes,
+                parent_import_run_id: originalRun.id,
+            }
+        });
+
+        if (originalRun.source === "csv") {
+            await testQueue.add("import_csv", {
+                importRunId: newRun.id,
+                tenantId: newRun.tenant_id,
+                entityType: newRun.entity_type
+            });
+        } else if (originalRun.source === "api" && originalRun.connector_id) {
+            const connector = await prisma.connector.findUnique({ where: { id: originalRun.connector_id } });
+            if (connector) {
+                const jobName = `${connector.type}_sync`;
+                await testQueue.add(jobName, {
+                    connectorId: connector.id,
+                    tenantId: connector.tenant_id,
+                    importRunId: newRun.id
+                });
+            } else {
+                return reply.status(400).send({ error: "Connector attached to import run not found anymore" });
+            }
+        }
+
+        return reply.status(202).send({ message: "Reprocess queued successfully", newImportRunId: newRun.id });
     });
 };
 

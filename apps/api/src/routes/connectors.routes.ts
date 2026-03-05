@@ -14,7 +14,11 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
     // So callback is PUBLIC, no authGuard! 
 
     // Public Callback
-    app.get("/shopify/callback", async (request, reply) => {
+    app.get("/shopify/callback", {
+        config: {
+            rateLimit: { max: 30, timeWindow: '1 minute' }
+        }
+    }, async (request, reply) => {
         const querySchema = z.object({
             shop: z.string(),
             code: z.string(),
@@ -111,7 +115,11 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
         return reply.redirect(`${webUrl}/app/connectors?shopify=connected`);
     });
 
-    app.get("/meli/callback", async (request, reply) => {
+    app.get("/meli/callback", {
+        config: {
+            rateLimit: { max: 30, timeWindow: '1 minute' }
+        }
+    }, async (request, reply) => {
         const querySchema = z.object({
             code: z.string(),
             state: z.string()

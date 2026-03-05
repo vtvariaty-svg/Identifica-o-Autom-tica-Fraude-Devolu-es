@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { API_URL, apiFetch } from "@/lib/api";
 
 export default function ImportDetailsClient({ id }: { id: string }) {
     const [run, setRun] = useState<any>(null);
     const [errors, setErrors] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [reprocessing, setReprocessing] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -51,10 +54,42 @@ export default function ImportDetailsClient({ id }: { id: string }) {
         return <div className="p-8 text-center text-destructive">Importação não encontrada ou acesso negado.</div>;
     }
 
+    const handleReprocess = async () => {
+        if (!confirm("Tem certeza que deseja reprocessar esta importação? Uma nova execução será enfileirada.")) return;
+        setReprocessing(true);
+        try {
+            const res = await apiFetch(`/imports/${id}/reprocess`, { method: "POST" });
+            const data = await res.json();
+            if (res.ok && data.newImportRunId) {
+                router.push(`/app/imports/${data.newImportRunId}`);
+            } else {
+                alert(data.error || "Erro ao reprocessar.");
+            }
+        } catch (err: any) {
+            alert("Erro de conexão ao reprocessar a fila.");
+        } finally {
+            setReprocessing(false);
+        }
+    };
+
     return (
         <div className="space-y-8">
             {/* Header Details */}
-            <div className="bg-card shadow-sm rounded-lg border border-border p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card shadow-sm rounded-lg border border-border p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+
+                {/* Reprocess Button Overlay if applicable */}
+                {(run.status === "failed" || run.error_rows > 0) && (
+                    <div className="absolute top-6 right-6">
+                        <button
+                            onClick={handleReprocess}
+                            disabled={reprocessing || loading}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+                        >
+                            {reprocessing ? "Reprocessando..." : "↻ Reprocessar Falhas"}
+                        </button>
+                    </div>
+                )}
+
                 <div>
                     <h2 className="text-xl font-semibold mb-4">Informações do Arquivo</h2>
                     <ul className="space-y-2 text-sm text-muted-foreground">

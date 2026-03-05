@@ -402,6 +402,32 @@ Nesta etapa implementamos nosso terceiro grande canal: a **Shopee**. A API da Sh
 ### Limitação de Sinais de Devolução (Shopee)
 Algumas sub-versões da *Open Platform Shopee API* (V2.1 e V2.2) travam fortemente acesso aos endpoints especializados `/api/v2/returns/get_return_list` atrás de uma Whitelist rígida de ERPs pré-aprovados pela matriz em Singapura. Portanto, para mantermos as engrenagens antifraude vitais sempre alimentadas em nosso código global, o MVP age identificando atritos no fluxo padrão de *status* da encomenda — cancelamentos e estornos marcados como `CANCELLED` no próprio Order Detail. Caso os parceiros subam na base Whitelist, basta substituir as assinaturas do `/get_order_list` para o `/get_return_list` reusando as funções prontas `generateShopeeSign`!
 
+---
+
+## Etapa 11: Hardening e Confiabilidade (Produção MVP)
+
+Esta etapa focou em tornar a aplicação resiliente e segura para operar em produção contínua no Render, aplicando conceitos de *Site Reliability Engineering (SRE)* e observabilidade básica.
+
+### Como Validar a Confiabilidade e Tolerância a Falhas
+
+1. **Idempotência (Não duplicação de dados):**
+   - Importe a mesma planilha de pedidos/devoluções múltiplas vezes. Observe que as constraints de Banco de Dados (`tenant_id` + `external_id`) combinadas ao `upsert` na API garantem que nenhum registro será duplicado. Erros de duplicação são silenciados ou atualizam o status das linhas na UI, garantindo reprocessamentos limpos.
+
+2. **Reprocessamento Seguro (Fila de Erros):**
+   - Caso uma importação ou sincronização falhe (por limite de tráfego, erro de rede, etc), você verá o botão "Reprocessar Falhas" no detalhe da Importação (`/app/imports/[id]`).
+   - Clicar nele vai criar uma nova `import_run` vinculada ao histórico original e disparar os jobs no Worker novamente, ignorando linhas já inseridas.
+
+3. **Rate Limiting em APIs intensivas:**
+   - Realize *Flood Requests* simulados nas rotas `/auth/login` (> 10x/min) ou em APIs pesadas como `/imports/csv` e `/:connectorId/sync` (> 30x/min). O sistema do Render bloqueará a execução retornando status `429 Too Many Requests`.
+
+4. **Retries e Observação de Workers Trancados (BullMQ):**
+   - Os jobs em segundo plano agora possuem "Exponential Backoff" atrelado. Falhas sistêmicas (como BD offline) não vão dropar o payload. O worker tentará processar a carga 5 vezes, aguardando períodos progressivamente maiores (1min, 2min, 4min...), antes de empurrá-las para as métricas da UI (Dead-Letter Status).
+
+### Rotinas de Recuperação (Disaster Recovery):
+* **Monitoramento Health Check:** A API possui rotas públicas de validação Liveness/Readiness e Banco de Dados (`/health` e `/db/ping`). Verifique se a flag de *Healthchecks* customizada no Render está pingando-os para auto-restart.
+* **Logs Críticos (Sentry):** Instâncias severas (`500`) na Web, Worker ou API, ou jobs que esgotaram a contagem total de 5 Retries, vão encaminhar Rastreios Completos (Dumps, Variables, Request IDs) para o **Sentry** (via env var `SENTRY_DSN`).
+* **Backups Neon:** Por lidarmos com transações Serverless do Neon, garantimos [Point-in-Time Recovery (PITR)](https://neon.tech/docs/manage/restore-data#point-in-time-recovery) diretamente na plataforma Neon sem a necessidade explícita de `pg_dump` custoso. Basta navegar até a plataforma NeonDB, ir na aba **Branches -> History** e reverter a base com precisão de minutos.
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:
