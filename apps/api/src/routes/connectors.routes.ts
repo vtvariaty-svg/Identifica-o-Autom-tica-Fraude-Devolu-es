@@ -111,6 +111,115 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
         return reply.redirect(`${webUrl}/app/connectors?shopify=connected`);
     });
 
+    app.get("/meli/callback", async (request, reply) => {
+        const querySchema = z.object({
+            code: z.string(),
+            state: z.string()
+        }).passthrough();
+
+        const query = querySchema.parse(request.query);
+        const { code, state } = query;
+
+        const oauthState = await (prisma as any).oauthState.findUnique({
+            where: { state }
+        });
+
+        if (!oauthState || oauthState.provider !== "meli") {
+            return reply.status(400).send({ error: "Invalid or expired state" });
+        }
+
+        if (new Date() > oauthState.expires_at) {
+            await (prisma as any).oauthState.delete({ where: { id: oauthState.id } });
+            return reply.status(400).send({ error: "State expired" });
+        }
+
+        const clientId = process.env.MELI_CLIENT_ID;
+        const clientSecret = process.env.MELI_CLIENT_SECRET;
+        const redirectUri = process.env.MELI_REDIRECT_URI;
+
+        if (!clientId || !clientSecret || !redirectUri) {
+            throw new Error("Missing Meli Env Vars");
+        }
+
+        const tokenRes = await fetch("https://api.mercadolibre.com/oauth/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            },
+            body: new URLSearchParams({
+                grant_type: "authorization_code",
+                client_id: clientId,
+                client_secret: clientSecret,
+                code,
+                redirect_uri: redirectUri
+            }).toString()
+        });
+
+        if (!tokenRes.ok) {
+            const err = await tokenRes.text();
+            app.log.error(`Meli Token Error: ${err}`);
+            return reply.status(500).send({ error: "Failed to exchange token" });
+        }
+
+        const tokenData = await tokenRes.json();
+        const { access_token, refresh_token, expires_in, user_id } = tokenData;
+
+        const encAccess = encryptToken(access_token);
+        const encRefresh = refresh_token ? encryptToken(refresh_token) : null;
+        const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+        const metadata = oauthState.metadata as any || {};
+        const site = metadata.site || "MLB";
+        const name = `Mercado Livre - ${site} (${user_id})`;
+
+        const configPayload = {
+            user_id: user_id.toString(),
+            country: site,
+            access_token_enc: encAccess.enc,
+            access_token_iv: encAccess.iv,
+            access_token_tag: encAccess.tag,
+            refresh_token_enc: encRefresh?.enc,
+            refresh_token_iv: encRefresh?.iv,
+            refresh_token_tag: encRefresh?.tag,
+            expires_at: expiresAt.toISOString()
+        };
+
+        // Unique constraint is (tenant_id, shop_domain)
+        // For Meli we use user_id as shop_domain to fit the constraint without breaking schema
+        const pseudoDomain = `meli_${user_id}`;
+
+        await (prisma as any).connector.upsert({
+            where: {
+                tenant_id_shop_domain: { tenant_id: oauthState.tenant_id, shop_domain: pseudoDomain }
+            },
+            create: {
+                tenant_id: oauthState.tenant_id,
+                type: "mercadolivre",
+                name,
+                shop_domain: pseudoDomain,
+                status: "connected",
+                scopes: "offline_access", // Generic
+                access_token_enc: "using_config", // Deprecated direct col
+                access_token_iv: "using_config",
+                access_token_tag: "using_config",
+                last_sync_at: null,
+                config: configPayload
+            },
+            update: {
+                status: "connected",
+                name,
+                config: configPayload
+            }
+        });
+
+        await (prisma as any).oauthState.delete({ where: { id: oauthState.id } });
+
+        const webUrl = process.env.APP_BASE_URL || "http://localhost:3000";
+        return reply.redirect(`${webUrl}/app/connectors?meli=connected`);
+    });
+
+
     // Authenticated Routes
     app.register(async (authApp) => {
         authApp.addHook("onRequest", authGuard);
@@ -148,6 +257,43 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
             return reply.send({ redirectUrl });
         });
 
+        authApp.post("/meli/install", async (request, reply) => {
+            const schema = z.object({
+                site: z.string().optional().default("MLB")
+            });
+            const { site } = schema.parse(request.body);
+            const tenantId = request.auth!.tenantId!;
+
+            const state = crypto.randomBytes(16).toString("hex");
+            const expires_at = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+            await (prisma as any).oauthState.create({
+                data: {
+                    tenant_id: tenantId,
+                    provider: "meli",
+                    state,
+                    expires_at,
+                    metadata: { site }
+                }
+            });
+
+            const clientId = process.env.MELI_CLIENT_ID;
+            const redirectUri = process.env.MELI_REDIRECT_URI;
+
+            if (!clientId || !redirectUri) {
+                throw new Error("Missing Meli Env Vars");
+            }
+
+            // auth domain depends on country, default MLB (Brazil)
+            let authDomain = "auth.mercadolivre.com.br";
+            if (site === "MLA") authDomain = "auth.mercadolibre.com.ar";
+            else if (site === "MLM") authDomain = "auth.mercadolibre.com.mx";
+
+            const redirectUrl = `https://${authDomain}/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+
+            return reply.send({ redirectUrl });
+        });
+
         authApp.get("/", async (request, reply) => {
             const tenantId = request.auth!.tenantId!;
             const connectors = await (prisma as any).connector.findMany({
@@ -180,9 +326,12 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
                 where: { id: connectorId, tenant_id: tenantId }
             });
 
-            if (!connector || connector.type !== "shopify") {
-                return reply.status(404).send({ error: "Connector not found" });
+            if (!connector || !["shopify", "mercadolivre"].includes(connector.type)) {
+                return reply.status(404).send({ error: "Connector not found or unsupported" });
             }
+
+            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
+            const jobName = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
 
             // Create ImportRun explicitly for sync
             const importRun = await prisma.importRun.create({
@@ -190,7 +339,7 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
                     tenant_id: tenantId,
                     connector_id: connector.id,
                     source: "api",
-                    entity_type: "shopify_sync",
+                    entity_type: syncEntityType,
                     status: "queued"
                 }
             });
@@ -200,7 +349,7 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
                 data: { status: "syncing" }
             });
 
-            await queue.add("shopify_sync", {
+            await queue.add(jobName, {
                 tenantId,
                 connectorId: connector.id,
                 importRunId: importRun.id
@@ -213,8 +362,18 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
             const tenantId = request.auth!.tenantId!;
             const connectorId = (request.params as any).id;
 
+            const connector = await (prisma as any).connector.findUnique({
+                where: { id: connectorId, tenant_id: tenantId }
+            });
+
+            if (!connector) {
+                return reply.status(404).send({ error: "Connector not found" });
+            }
+
+            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
+
             const lastRun = await prisma.importRun.findFirst({
-                where: { tenant_id: tenantId, connector_id: connectorId, entity_type: "shopify_sync" },
+                where: { tenant_id: tenantId, connector_id: connectorId, entity_type: syncEntityType },
                 orderBy: { created_at: "desc" },
                 include: { errors: { take: 5, orderBy: { created_at: "desc" } } }
             });

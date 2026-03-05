@@ -282,6 +282,7 @@ model Connector {
   last_sync_at     DateTime?
   last_error       String?
   last_error_at    DateTime?
+  config           Json?     // Stores Meli tokens, expires_at, user_id, etc.
   created_at       DateTime  @default(now())
   updated_at       DateTime  @default(now()) @updatedAt
 
@@ -299,8 +300,10 @@ model Connector {
 model OauthState {
   id          String   @id @default(uuid()) @db.Uuid
   tenant_id   String   @db.Uuid
-  shop_domain String
+  provider    String   @default("shopify") // 'shopify' | 'meli'
+  shop_domain String?  // Optional now, mainly for shopify
   state       String   @unique
+  metadata    Json?    // Stores site/country, user payload overrides
   created_at  DateTime @default(now())
   expires_at  DateTime
 

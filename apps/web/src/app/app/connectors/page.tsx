@@ -21,12 +21,14 @@ interface Connector {
 export default function ConnectorsPage() {
     const { user } = useAuth();
     const searchParams = useSearchParams();
-    const justConnected = searchParams.get("shopify") === "connected";
+    const justConnectedShopify = searchParams.get("shopify") === "connected";
+    const justConnectedMeli = searchParams.get("meli") === "connected";
 
     const [connectors, setConnectors] = useState<Connector[]>([]);
     const [loading, setLoading] = useState(true);
     const [shopDomain, setShopDomain] = useState("");
-    const [installing, setInstalling] = useState(false);
+    const [installingShopify, setInstallingShopify] = useState(false);
+    const [installingMeli, setInstallingMeli] = useState(false);
     const [syncingId, setSyncingId] = useState<string | null>(null);
     const [syncError, setSyncError] = useState("");
 
@@ -59,7 +61,7 @@ export default function ConnectorsPage() {
 
     const handleInstallShopify = async (e: React.FormEvent) => {
         e.preventDefault();
-        setInstalling(true);
+        setInstallingShopify(true);
         try {
             // Basic sanitization
             const cleanDomain = shopDomain.replace(/https?:\/\//, "").trim();
@@ -72,7 +74,23 @@ export default function ConnectorsPage() {
             }
         } catch (err: any) {
             alert(err.message || "Falha ao iniciar a instalação.");
-            setInstalling(false);
+            setInstallingShopify(false);
+        }
+    };
+
+    const handleInstallMeli = async () => {
+        setInstallingMeli(true);
+        try {
+            const res = await apiFetch("/connectors/meli/install", {
+                method: "POST",
+                body: JSON.stringify({ site: "MLB" }), // Default MVP Brazil
+            });
+            if (res.redirectUrl) {
+                window.location.href = res.redirectUrl;
+            }
+        } catch (err: any) {
+            alert(err.message || "Falha ao iniciar a instalação do Mercado Livre.");
+            setInstallingMeli(false);
         }
     };
 
@@ -90,6 +108,7 @@ export default function ConnectorsPage() {
     };
 
     const hasShopify = connectors.some(c => c.type === "shopify");
+    const hasMeli = connectors.some(c => c.type === "mercadolivre");
 
     if (loading) {
         return <div className="p-8 text-slate-500 flex items-center gap-2"><Loader2 className="animate-spin w-5 h-5" /> Carregando conectores...</div>;
@@ -104,12 +123,22 @@ export default function ConnectorsPage() {
                 </h1>
             </div>
 
-            {justConnected && (
+            {justConnectedShopify && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg flex items-center gap-3">
                     <CheckCircle2 className="w-6 h-6 text-green-500" />
                     <div>
                         <h3 className="font-medium">Shopify conectado com sucesso!</h3>
                         <p className="text-sm opacity-90">Sua loja já está autorizada. Clique em "Sincronizar agora" para baixar as devoluções.</p>
+                    </div>
+                </div>
+            )}
+
+            {justConnectedMeli && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg flex items-center gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-600" />
+                    <div>
+                        <h3 className="font-medium">Mercado Livre conectado com sucesso!</h3>
+                        <p className="text-sm opacity-90">Sua conta de vendedor foi vinculada. Clique em "Sincronizar agora" para puxar as vendas e ocorrências.</p>
                     </div>
                 </div>
             )}
@@ -143,14 +172,43 @@ export default function ConnectorsPage() {
                             </p>
                             <button
                                 type="submit"
-                                disabled={installing || !shopDomain}
+                                disabled={installingShopify || !shopDomain}
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
                             >
-                                {installing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                {installingShopify ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                                 Conectar Shopify
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+
+            {!hasMeli && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                    <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-lg bg-[#FFE600] flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-6 h-6 text-slate-800" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-semibold text-slate-900">Conectar Mercado Livre</h2>
+                            <p className="text-slate-500 mt-1">Conecte sua conta de vendedor para analisar os estornos, devoluções parciais (mediações) e cancelar fraudes nativamente.</p>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        <div className="max-w-md">
+                            <button
+                                onClick={handleInstallMeli}
+                                disabled={installingMeli}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFE600] text-slate-900 text-sm font-semibold rounded-lg hover:bg-[#F2DA00] disabled:opacity-50 transition-colors"
+                            >
+                                {installingMeli ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Conectar Conta MLB
+                            </button>
+                            <p className="text-xs text-slate-500 mt-3 inline-block ml-3">
+                                Você será enviado ao Mercado Livre para login.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -162,7 +220,7 @@ export default function ConnectorsPage() {
                     connectors.map(c => (
                         <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${c.type === 'shopify' ? 'bg-[#95BF47]/10 text-[#95BF47]' : 'bg-slate-100 text-slate-500'}`}>
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${c.type === 'shopify' ? 'bg-[#95BF47]/10 text-[#95BF47]' : c.type === 'mercadolivre' ? 'bg-[#FFE600]/20 text-yellow-600' : 'bg-slate-100 text-slate-500'}`}>
                                     <ShoppingBag className="w-6 h-6" />
                                 </div>
                                 <div>

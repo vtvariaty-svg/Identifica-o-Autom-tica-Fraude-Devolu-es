@@ -171,3 +171,21 @@ Cookie: token={{USER_TOKEN}}
 ### Trigger Manual Sync
 POST {{baseUrl}}/connectors/{{CONNECTOR_ID}}/sync
 Cookie: token={{USER_TOKEN}}
+
+###
+# -------------------------------------------------------------
+# ETAPA 9: Conector Mercado Livre
+# -------------------------------------------------------------
+
+### Install Mercado Livre (Start OAuth)
+POST {{baseUrl}}/connectors/meli/install
+Content-Type: application/json
+Cookie: token={{USER_TOKEN}}
+
+{
+  "site": "MLB" 
+}
+
+### Trigger Manual Sync (Meli)
+POST {{baseUrl}}/connectors/{{MELI_CONNECTOR_ID}}/sync
+Cookie: token={{USER_TOKEN}}

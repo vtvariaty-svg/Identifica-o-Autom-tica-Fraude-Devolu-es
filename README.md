@@ -330,6 +330,43 @@ Nesta etapa, o sistema passa a permitir a sincronização automatizada de Pedido
 
 **Notas de Segurança:** Os Tokens de Acesso à Shopify não ficam expostos em tela e são gravados no banco de dados duplamente bloqueados (AES-256 GCM) com Initialization Vector aleatório e Authentication Tag verificadora.
 
+---
+
+## Etapa 9: Conector Mercado Livre (Integração Automática 2)
+
+Nesta etapa, adicionamos o segundo grande canal de vendas B2C: o **Mercado Livre**. O fluxo engloba a gestão do OAuth2 completo (incluindo *Refresh Tokens* transparentes de longa duração), criptografia em repouso e sincronização incremental de pedidos (Orders) e pagamentos (Payments) usados para derivar devoluções virtuais e unificar na Fila de Casos do nosso SaaS.
+
+### Como Validar o Conector Mercado Livre no Render
+
+1. **Configuração de Variáveis (Render - API Service)**:
+   A API precisa das seguintes chaves de ambiente para comunicar com o ecossistema Mercado Livre:
+   - `MELI_CLIENT_ID`: A chave pública (App ID) do seu App no Mercado Livre Developers.
+   - `MELI_CLIENT_SECRET`: A senha secreta do seu App no ML.
+   - `MELI_REDIRECT_URI`: `https://SEU_DOMINIO_API.onrender.com/connectors/meli/callback`
+   - `APP_BASE_URL`: `https://SEU_DOMINIO_WEB.onrender.com` (Garante o redirect pro Front-End).
+   - `ENCRYPTION_KEY_BASE64`: A mesma chave-mestre gerada na Etapa 8 (32 bytes AES-256-GCM).
+
+2. **Configuração no Mercado Livre Developers**:
+   - Vá ao painel do ML (https://developers.mercadolivre.com.br/devcenter).
+   - Entre nas configurações do seu App.
+   - Na seção "URI de Redirecionamento", insira EXATAMENTE o mesmo valor apontado acima no `MELI_REDIRECT_URI` (sua API hospedada).
+
+3. **Iniciando Onboarding no Front-End**:
+   - Faça Login no Painel Web (`/app`).
+   - Navegue pelo Menu Lateral até **Conectores**.
+   - Você verá o novo card amarelo "Conectar Mercado Livre".
+   - Clique e selecione a conta que deseja aprovar (Sandbox ou Real).
+
+4. **Sincronização Incremental B2B**:
+   - De volta a tela de Conectores, clique no botão **Sincronizar agora** do item pertencente ao Mercado Livre.
+   - O Worker BullMQ processará o Job `meli_sync`.
+   - Pedidos serão puxados do ML e normalizados na tabela `orders`.
+   - **Mapeamento Flexível de Devolução (MVP)**: O worker processará em lote os estornos originados nas matrizes de pagamento (`payments.status = refunded/cancelled`). Cada evento destes será materializado na tabela `returns` com a *reason:* `ML Payment Status`.
+   - Feito isso, as features e scores do antifraude reagirão automaticamente calculando o risco desses *chargebacks* recém chegados!
+
+### Limitações Arquiteturais do MVP (Mapeamento de Devolução/Reembolso ML)
+O endpoint de *Claims* e Mediações rigorosas do ML não pôde ser atrelado com total fidelidade nesta fase rápida (Steps). Portanto, nosso sistema age capturando devoluções via o encerramento do recurso de **Pagamentos Estornados** (`transaction_amount`). Isso nos concede um grau de visibilidade suficiente para disparar a Fila Operacional com notas razoáveis. Implementações futuras demandarão webhook realtime e polling em `/post-purchase/v1/claims` para pegar disputas antes de se tornarem reembolsos definitivos.
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:

@@ -3,9 +3,10 @@ import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import IORedis from "ioredis";
 import importCsvJob from "./jobs/import_csv.job";
-import computeFeaturesForReturnJob from "./jobs/compute_features_for_return.job";
-import computeRiskScoreForReturnJob from "./jobs/compute_risk_score_for_return.job";
+import computeFeaturesJob from "./jobs/compute_features_for_return.job";
+import computeRiskScoreJob from "./jobs/compute_risk_score_for_return.job";
 import shopifySyncJob from "./jobs/shopify_sync.job";
+import meliSyncJob from "./jobs/meli_sync.job";
 
 dotenv.config();
 
@@ -36,24 +37,21 @@ async function start() {
         async (job) => {
             console.log(`[Worker] Executing job ${job.id} of type ${job.name}`);
 
-            if (job.name === "import_csv") {
-                return await importCsvJob(job);
+            switch (job.name) {
+                case "import_csv":
+                    return await importCsvJob(job);
+                case "compute_features_for_return":
+                    return await computeFeaturesJob(job);
+                case "compute_risk_score_for_return":
+                    return await computeRiskScoreJob(job);
+                case "shopify_sync":
+                    return await shopifySyncJob(job);
+                case "meli_sync":
+                    return await meliSyncJob(job);
+                default:
+                    console.log(`[Worker] Data:`, job.data);
+                    return { success: true, processedAt: new Date().toISOString() };
             }
-
-            if (job.name === "compute_features_for_return") {
-                return await computeFeaturesForReturnJob(job);
-            }
-
-            if (job.name === "compute_risk_score_for_return") {
-                return await computeRiskScoreForReturnJob(job);
-            }
-
-            if (job.name === "shopify_sync") {
-                return await shopifySyncJob(job);
-            }
-
-            console.log(`[Worker] Data:`, job.data);
-            return { success: true, processedAt: new Date().toISOString() };
         },
         { connection: connection as any }
     );
