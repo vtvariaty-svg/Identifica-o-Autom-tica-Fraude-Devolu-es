@@ -88,7 +88,7 @@ export default async function shopifySyncJob(job: Job) {
                 }
             }`;
 
-            const res = await fetch(`https://${shopDomain}/admin/api/2024-04/graphql.json`, {
+            const res: any = await fetch(`https://${shopDomain}/admin/api/2024-04/graphql.json`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -102,12 +102,12 @@ export default async function shopifySyncJob(job: Job) {
                 throw new Error(`Shopify API Error: ${errText}`);
             }
 
-            const json = await res.json();
+            const json: any = await res.json();
             if (json.errors) {
                 throw new Error(`Shopify GraphQL Error: ${JSON.stringify(json.errors)}`);
             }
 
-            const ordersPage = json.data.orders;
+            const ordersPage: any = json.data.orders;
             hasNextPage = ordersPage.pageInfo.hasNextPage;
             cursor = ordersPage.pageInfo.endCursor;
 
