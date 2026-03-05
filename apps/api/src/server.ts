@@ -13,6 +13,7 @@ import featuresRoutes from "./routes/features.routes";
 import importRoutes from "./routes/import.routes";
 import casesRoutes from "./routes/cases.routes";
 import { metricsRoutes } from "./routes/metrics.routes";
+import { connectorsRoutes } from "./routes/connectors.routes";
 
 const server = Fastify({
     logger: {
@@ -41,6 +42,7 @@ server.register(featuresRoutes, { prefix: "/returns" });
 server.register(importRoutes, { prefix: "/imports" });
 server.register(casesRoutes, { prefix: "/cases" });
 server.register(metricsRoutes, { prefix: "/metrics" });
+server.register(connectorsRoutes, { prefix: "/connectors" });
 
 server.setErrorHandler((error, request, reply) => {
     server.log.error(error);

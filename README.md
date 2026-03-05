@@ -282,9 +282,53 @@ Nesta etapa exibimos o valor do sistema antifraude através de Dashboards e Rank
    - Use os inputs de data `De/Ate` para selecionar um período e clique em **Aplicar Filtro**.
    - Veja a tabela de Top 50 Sinais e a tabela de Top 50 Clientes detalhando devoluções aprovadas, pendentes e rejeitadas.
 5. Validação via HTTP direta na API:
-   - Dê um `GET` para `https://API_BASE_URL/metrics/summary?range=30d` no seu ambiente.
    - `GET` para `https://API_BASE_URL/metrics/top-reasons?range=30d&limit=10`.
    - Tudo formatado e Tenant-Scoped baseado no Authentication Token!
+
+---
+
+## Etapa 8: Conector Shopify (Integração Automática)
+
+Nesta etapa, o sistema passa a permitir a sincronização automatizada de Pedidos e Devoluções (via Refunds) direto da loja Shopify do Tenant através de autenticação OAuth e Background Jobs.
+
+### Como Validar o fluxo de Conectores no Render (Sem Localhost)
+
+1. **Configuração de Variáveis (Render - API Service)**:
+   Garanta que seu serviço da API no Render contenha as seguintes variáveis de ambiente:
+   - `SHOPIFY_API_KEY`: A chave pública do seu App Customizado no Shopify Partners.
+   - `SHOPIFY_API_SECRET`: O Client Secret do app.
+   - `SHOPIFY_SCOPES`: `read_orders,read_customers,read_returns`
+   - `APP_BASE_URL`: `https://SEU_DOMINIO_WEB.onrender.com` (Opcional para redirect).
+   - `SHOPIFY_OAUTH_CALLBACK_URL`: `https://SEU_DOMINIO_API.onrender.com/connectors/shopify/callback`
+   - `ENCRYPTION_KEY_BASE64`: Uma chave simétrica base64 de exatos 32 bytes (utilizada para criptografia de repouso segura do Token `AES-256-GCM`).
+
+2. **Configuração no Shopify Partners**:
+   - Entre no painel do seu App Shopify.
+   - Na seção "Allowed redirect URLs", insira EXATAMENTE o valor do seu `SHOPIFY_OAUTH_CALLBACK_URL` configurado no Render.
+   - Na "App URL", insira o seu `APP_BASE_URL`.
+
+3. **Iniciando Onboarding no Front-End**:
+   - Faça Login no Painel Web (`/app`).
+   - Navegue pelo Menu Lateral até **Conectores**.
+   - Você verá o botão para *Conectar Shopify*.
+   - Digite o domínio da sua loja de teste (ex: `dev-loja.myshopify.com`) e clique.
+
+4. **Autorização OAuth**:
+   - Você será levado à tela da Shopify para aprovação.
+   - Após consentir as permissões, o Shopify redirecionará de volta à nossa API e logo em seguida para a tela Web de Conectores exibindo status verde de **Conectado**.
+
+5. **Sincronização Incremental (Worker)**:
+   - Na tela raiz de Conectores, clique no botão rotativo **Sincronizar agora**.
+   - O Worker BullMQ receberá o Job `shopify_sync`.
+   - Via paginação GraphQL, o Worker extrairá os últimos pedidos e *Refunds*, convertendo-os em nossa modelagem Canônica Universal (Customers, Orders, Returns, OrderItems).
+   - Simultaneamente, ao encerrar o upsert e a normalização de cada *Return*, o worker dispara uma reação em cadeia chamando `compute_features` e encadeando `compute_risk_score`.
+
+6. **Validação Final**:
+   - Cheque a aba **Devoluções**. As importações recentes do Shopify constarão lá.
+   - Cheque a aba **Fila de Casos**. As mercadorias sincronizadas cuja Inteligência Artificial julgou fraude de alto-risco já aparecerão sozinhas ali para análise humana!
+   - Navegue pro **Dashboard ROI**. Novas importações atualizam os rankings de forma fluida.
+
+**Notas de Segurança:** Os Tokens de Acesso à Shopify não ficam expostos em tela e são gravados no banco de dados duplamente bloqueados (AES-256 GCM) com Initialization Vector aleatório e Authentication Tag verificadora.
 
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.

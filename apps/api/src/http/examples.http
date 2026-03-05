@@ -149,3 +149,25 @@ Authorization: Bearer {{AUTH_TOKEN}}
 # GET /metrics/top-customers
 GET {{API_BASE_URL}}/metrics/top-customers?range=90d&limit=5
 Authorization: Bearer {{AUTH_TOKEN}}
+
+###
+# -------------------------------------------------------------
+# ETAPA 8: Conector Shopify
+# -------------------------------------------------------------
+
+### Install Shopify (Start OAuth)
+POST {{baseUrl}}/connectors/shopify/install
+Content-Type: application/json
+Cookie: token={{USER_TOKEN}}
+
+{
+  "shopDomain": "minha-loja-teste.myshopify.com"
+}
+
+### List Connectors
+GET {{baseUrl}}/connectors
+Cookie: token={{USER_TOKEN}}
+
+### Trigger Manual Sync
+POST {{baseUrl}}/connectors/{{CONNECTOR_ID}}/sync
+Cookie: token={{USER_TOKEN}}

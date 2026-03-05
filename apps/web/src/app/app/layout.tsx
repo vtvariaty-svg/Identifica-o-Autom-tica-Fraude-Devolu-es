@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { usePathname } from "next/navigation";
-import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart, ShieldCheck, TrendingUp, FileText } from "lucide-react";
+import { LogOut, Home, Building, ShieldAlert, UploadCloud, ShoppingCart, ShieldCheck, TrendingUp, FileText, AlertTriangle, Plug, Upload } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, tenant, logout } = useAuth();
@@ -13,7 +13,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         { name: "Início", href: "/app", icon: Home },
         { name: "Dashboard ROI", href: "/app/dashboard", icon: TrendingUp },
         { name: "Relatórios", href: "/app/reports", icon: FileText },
-        { name: "Fila de Casos", href: "/app/cases", icon: ShieldCheck },
+        { name: "Casos de Fraude", href: "/app/cases", icon: AlertTriangle },
+        { name: "Conectores", href: "/app/connectors", icon: Plug },
         { name: "Devoluções", href: "/app/returns", icon: ShoppingCart },
         { name: "Importações CSV", href: "/app/imports", icon: UploadCloud },
         { name: "Tenants", href: "/app/tenants", icon: Building },

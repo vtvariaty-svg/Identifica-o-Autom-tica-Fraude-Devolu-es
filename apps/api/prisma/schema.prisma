@@ -47,6 +47,7 @@ model Tenant {
   decisions        Decision[]
   featuresSnapshot FeaturesSnapshot[]
   connectors       Connector[]
+  oauthStates      OauthState[]
   importRuns       ImportRun[]
   importErrors     ImportError[]
 
@@ -268,23 +269,45 @@ model FraudScore {
 }
 
 model Connector {
-  id         String   @id @default(uuid()) @db.Uuid
-  tenant_id  String   @db.Uuid
-  type       String
-  name       String
-  status     String   @default("inactive")
-  config     Json?
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now()) @updatedAt
+  id               String    @id @default(uuid()) @db.Uuid
+  tenant_id        String    @db.Uuid
+  type             String
+  name             String
+  status           String    @default("inactive")
+  shop_domain      String
+  scopes           String
+  access_token_enc String
+  access_token_iv  String
+  access_token_tag String
+  last_sync_at     DateTime?
+  last_error       String?
+  last_error_at    DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
 
   tenant     Tenant      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   orders     Order[]
   returns    Return[]
   importRuns ImportRun[]
 
+  @@unique([tenant_id, shop_domain])
   @@index([tenant_id, type])
   @@index([tenant_id, status])
   @@map("connectors")
+}
+
+model OauthState {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  shop_domain String
+  state       String   @unique
+  created_at  DateTime @default(now())
+  expires_at  DateTime
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, shop_domain])
+  @@map("oauth_states")
 }
 
 model ImportRun {

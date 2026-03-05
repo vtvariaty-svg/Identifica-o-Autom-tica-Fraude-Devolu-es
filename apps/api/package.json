@@ -6,7 +6,10 @@
         "dev": "tsx watch src/server.ts",
         "build": "prisma generate && tsc",
         "start": "node dist/server.js",
-        "seed:canonical": "tsx scripts/seed_canonical.ts"
+        "seed:canonical": "tsx scripts/seed_canonical.ts",
+        "db:migrate": "prisma migrate dev",
+        "db:push": "prisma db push",
+        "db:studio": "prisma studio"
     },
     "dependencies": {
         "@fastify/cookie": "^9.3.1",
