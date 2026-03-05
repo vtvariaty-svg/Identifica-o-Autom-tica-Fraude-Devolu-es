@@ -45,13 +45,14 @@ export const metricsRoutes: FastifyPluginAsync = async (app) => {
                 scores: { orderBy: { computed_at: "desc" }, take: 1 },
                 decisions: { orderBy: { decided_at: "desc" }, take: 1 },
                 featuresSnapshot: { orderBy: { computed_at: "desc" }, take: 1 }
-            }
+            } as any
         });
 
         return rawReturns.map(r => {
-            const latestScoreObj = r.scores?.[0] || null;
-            const latestDecisionObj = r.decisions?.[0] || null;
-            const latestSnapshotObj = r.featuresSnapshot?.[0] || null;
+            const data = r as any;
+            const latestScoreObj = data.scores?.[0] || null;
+            const latestDecisionObj = data.decisions?.[0] || null;
+            const latestSnapshotObj = data.featuresSnapshot?.[0] || null;
 
             // Value resolution logic
             let valueCents = 0;
@@ -59,8 +60,8 @@ export const metricsRoutes: FastifyPluginAsync = async (app) => {
                 valueCents = r.refund_amount_cents;
             } else if (latestSnapshotObj && (latestSnapshotObj.features_json as any)?.returned_items_value_cents != null) {
                 valueCents = Number((latestSnapshotObj.features_json as any).returned_items_value_cents);
-            } else if (r.order?.total_cents != null) {
-                valueCents = r.order.total_cents;
+            } else if (data.order?.total_cents != null) {
+                valueCents = data.order.total_cents;
             }
 
             const score = latestScoreObj?.score || 0;
@@ -80,7 +81,7 @@ export const metricsRoutes: FastifyPluginAsync = async (app) => {
                 isAvoided,
                 isApproved,
                 reasons: (latestScoreObj?.reasons_json as any) || [],
-                customer: r.order?.customer || null
+                customer: data.order?.customer || null
             };
         });
     };
@@ -185,9 +186,9 @@ export const metricsRoutes: FastifyPluginAsync = async (app) => {
 
         for (const item of data) {
             const cust = item.customer;
-            const customerKey = cust?.id ?\`cust:\${cust.id}\` 
-                : cust?.external_id ? \`external:\${cust.external_id}\` 
-                : cust?.email ? \`email:\${cust.email}\` : "unknown";
+            const customerKey = cust?.id ? `cust:${cust.id}`
+                : cust?.external_id ? `external:${cust.external_id}`
+                    : cust?.email ? `email:${cust.email}` : "unknown";
 
             const existing = customersMap.get(customerKey) || {
                 customer_key: customerKey,
