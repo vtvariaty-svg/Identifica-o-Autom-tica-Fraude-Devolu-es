@@ -15,7 +15,7 @@
         "@fastify/cookie": "^9.3.1",
         "@fastify/cors": "^8.5.0",
         "@fastify/multipart": "^8.3.0",
-        "@fastify/rate-limit": "^10.3.0",
+        "@fastify/rate-limit": "^9.1.0",
         "@prisma/client": "^5.14.0",
         "@sentry/node": "^10.42.0",
         "@sentry/profiling-node": "^10.42.0",
