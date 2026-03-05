@@ -189,3 +189,24 @@ Cookie: token={{USER_TOKEN}}
 ### Trigger Manual Sync (Meli)
 POST {{baseUrl}}/connectors/{{MELI_CONNECTOR_ID}}/sync
 Cookie: token={{USER_TOKEN}}
+
+###
+# -------------------------------------------------------------
+# ETAPA 10: Conector Shopee
+# -------------------------------------------------------------
+
+### Install Shopee (Connect manually via API keys)
+POST {{baseUrl}}/connectors/shopee/connect
+Content-Type: application/json
+Cookie: token={{USER_TOKEN}}
+
+{
+  "name": "Shopee Principal BR",
+  "shopId": "123456789",
+  "region": "BR",
+  "accessToken": "opcional_depende_do_app"
+}
+
+### Trigger Manual Sync (Shopee)
+POST {{baseUrl}}/connectors/{{SHOPEE_CONNECTOR_ID}}/sync
+Cookie: token={{USER_TOKEN}}

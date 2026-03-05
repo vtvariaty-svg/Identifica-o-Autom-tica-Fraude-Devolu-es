@@ -294,6 +294,69 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
             return reply.send({ redirectUrl });
         });
 
+        authApp.post("/shopee/connect", async (request, reply) => {
+            const schema = z.object({
+                name: z.string().min(1).default("Shopee Store"),
+                shopId: z.string().min(1),
+                region: z.string().optional().default("BR"),
+                accessToken: z.string().optional(),
+                refreshToken: z.string().optional(),
+                tokenExpiresAt: z.string().optional()
+            });
+            const { name, shopId, region, accessToken, refreshToken, tokenExpiresAt } = schema.parse(request.body);
+            const tenantId = request.auth!.tenantId!;
+
+            // Encrypt tokens if provided (Shopee v2 requires them for most endpoints)
+            const encAccess = accessToken ? encryptToken(accessToken) : null;
+            const encRefresh = refreshToken ? encryptToken(refreshToken) : null;
+
+            const configPayload = {
+                shop_id: shopId,
+                region,
+                access_token_enc: encAccess?.enc,
+                access_token_iv: encAccess?.iv,
+                access_token_tag: encAccess?.tag,
+                refresh_token_enc: encRefresh?.enc,
+                refresh_token_iv: encRefresh?.iv,
+                refresh_token_tag: encRefresh?.tag,
+                token_expires_at: tokenExpiresAt,
+                // store API base to allow flexible region overrides if needed
+                api_base: process.env.SHOPEE_API_BASE || "https://partner.shopeemobile.com"
+            };
+
+            const pseudoDomain = `shopee_${shopId}`;
+
+            // Create or update the Shopee connector
+            const connector = await (prisma as any).connector.upsert({
+                where: {
+                    tenant_id_shop_domain: { tenant_id: tenantId, shop_domain: pseudoDomain }
+                },
+                create: {
+                    tenant_id: tenantId,
+                    type: "shopee",
+                    name,
+                    shop_domain: pseudoDomain,
+                    status: "connected",
+                    scopes: "general", // MVP
+                    access_token_enc: "using_config",
+                    access_token_iv: "using_config",
+                    access_token_tag: "using_config",
+                    last_sync_at: null,
+                    config: configPayload
+                },
+                update: {
+                    status: "connected",
+                    name,
+                    config: configPayload
+                }
+            });
+
+            // Note: A real "test connection" call could be placed here (e.g. get_shop_info).
+            // For the MVP, if they provide the IDs, we assume it's connected and let the async sync job test it.
+
+            return reply.send({ success: true, connectorId: connector.id });
+        });
+
         authApp.get("/", async (request, reply) => {
             const tenantId = request.auth!.tenantId!;
             const connectors = await (prisma as any).connector.findMany({
@@ -326,12 +389,12 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
                 where: { id: connectorId, tenant_id: tenantId }
             });
 
-            if (!connector || !["shopify", "mercadolivre"].includes(connector.type)) {
+            if (!connector || !["shopify", "mercadolivre", "shopee"].includes(connector.type)) {
                 return reply.status(404).send({ error: "Connector not found or unsupported" });
             }
 
-            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
-            const jobName = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
+            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : connector.type === "mercadolivre" ? "meli_sync" : "shopee_sync";
+            const jobName = syncEntityType; // They map 1:1 right now
 
             // Create ImportRun explicitly for sync
             const importRun = await prisma.importRun.create({
@@ -370,7 +433,7 @@ export const connectorsRoutes: FastifyPluginAsync = async (app) => {
                 return reply.status(404).send({ error: "Connector not found" });
             }
 
-            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : "meli_sync";
+            const syncEntityType = connector.type === "shopify" ? "shopify_sync" : connector.type === "mercadolivre" ? "meli_sync" : "shopee_sync";
 
             const lastRun = await prisma.importRun.findFirst({
                 where: { tenant_id: tenantId, connector_id: connectorId, entity_type: syncEntityType },

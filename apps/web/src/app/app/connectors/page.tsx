@@ -29,6 +29,9 @@ export default function ConnectorsPage() {
     const [shopDomain, setShopDomain] = useState("");
     const [installingShopify, setInstallingShopify] = useState(false);
     const [installingMeli, setInstallingMeli] = useState(false);
+    const [installingShopee, setInstallingShopee] = useState(false);
+    const [shopeeShopId, setShopeeShopId] = useState("");
+    const [shopeeAccessToken, setShopeeAccessToken] = useState("");
     const [syncingId, setSyncingId] = useState<string | null>(null);
     const [syncError, setSyncError] = useState("");
 
@@ -94,6 +97,24 @@ export default function ConnectorsPage() {
         }
     };
 
+    const handleInstallShopee = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setInstallingShopee(true);
+        try {
+            await apiFetch("/connectors/shopee/connect", {
+                method: "POST",
+                body: JSON.stringify({ shopId: shopeeShopId, accessToken: shopeeAccessToken }),
+            });
+            setShopeeShopId("");
+            setShopeeAccessToken("");
+            fetchConnectors();
+        } catch (err: any) {
+            alert(err.message || "Falha ao conectar loja Shopee.");
+        } finally {
+            setInstallingShopee(false);
+        }
+    };
+
     const handleSync = async (id: string) => {
         setSyncingId(id);
         setSyncError("");
@@ -109,6 +130,7 @@ export default function ConnectorsPage() {
 
     const hasShopify = connectors.some(c => c.type === "shopify");
     const hasMeli = connectors.some(c => c.type === "mercadolivre");
+    const hasShopee = connectors.some(c => c.type === "shopee");
 
     if (loading) {
         return <div className="p-8 text-slate-500 flex items-center gap-2"><Loader2 className="animate-spin w-5 h-5" /> Carregando conectores...</div>;
@@ -212,6 +234,59 @@ export default function ConnectorsPage() {
                 </div>
             )}
 
+            {!hasShopee && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                    <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-lg bg-[#EE4D2D] flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-semibold text-slate-900">Conectar Shopee</h2>
+                            <p className="text-slate-500 mt-1">Sincronize pedidos e rastreie devoluções (refunds/RTS) diretamente da API Shopee Open Platform.</p>
+                        </div>
+                    </div>
+                    <form onSubmit={handleInstallShopee} className="p-6">
+                        <div className="max-w-md space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Shop ID (Obrigatório)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={shopeeShopId}
+                                    onChange={(e) => setShopeeShopId(e.target.value)}
+                                    placeholder="Ex: 5123498"
+                                    className="w-full border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Access Token (Opcional, depende do App)
+                                </label>
+                                <input
+                                    type="password"
+                                    value={shopeeAccessToken}
+                                    onChange={(e) => setShopeeAccessToken(e.target.value)}
+                                    placeholder="Cole o token de acesso (se houver)"
+                                    className="w-full border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">O Partner ID e Key devem estar configurados no backend.</p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={installingShopee || !shopeeShopId}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#EE4D2D] text-white text-sm font-medium rounded-lg hover:bg-[#D74022] disabled:opacity-50 transition-colors"
+                            >
+                                {installingShopee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Conectar Shopee
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
             <div className="space-y-4">
                 <h3 className="text-lg font-medium text-slate-900 mb-4">Conectores Ativos</h3>
                 {connectors.length === 0 ? (
@@ -220,7 +295,7 @@ export default function ConnectorsPage() {
                     connectors.map(c => (
                         <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${c.type === 'shopify' ? 'bg-[#95BF47]/10 text-[#95BF47]' : c.type === 'mercadolivre' ? 'bg-[#FFE600]/20 text-yellow-600' : 'bg-slate-100 text-slate-500'}`}>
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${c.type === 'shopify' ? 'bg-[#95BF47]/10 text-[#95BF47]' : c.type === 'mercadolivre' ? 'bg-[#FFE600]/20 text-yellow-600' : c.type === 'shopee' ? 'bg-[#EE4D2D]/10 text-[#EE4D2D]' : 'bg-slate-100 text-slate-500'}`}>
                                     <ShoppingBag className="w-6 h-6" />
                                 </div>
                                 <div>

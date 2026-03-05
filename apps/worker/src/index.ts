@@ -7,6 +7,7 @@ import computeFeaturesJob from "./jobs/compute_features_for_return.job";
 import computeRiskScoreJob from "./jobs/compute_risk_score_for_return.job";
 import shopifySyncJob from "./jobs/shopify_sync.job";
 import meliSyncJob from "./jobs/meli_sync.job";
+import shopeeSyncJob from "./jobs/shopee_sync.job";
 
 dotenv.config();
 
@@ -48,6 +49,8 @@ async function start() {
                     return await shopifySyncJob(job);
                 case "meli_sync":
                     return await meliSyncJob(job);
+                case "shopee_sync":
+                    return await shopeeSyncJob(job);
                 default:
                     console.log(`[Worker] Data:`, job.data);
                     return { success: true, processedAt: new Date().toISOString() };

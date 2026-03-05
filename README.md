@@ -367,6 +367,41 @@ Nesta etapa, adicionamos o segundo grande canal de vendas B2C: o **Mercado Livre
 ### Limitações Arquiteturais do MVP (Mapeamento de Devolução/Reembolso ML)
 O endpoint de *Claims* e Mediações rigorosas do ML não pôde ser atrelado com total fidelidade nesta fase rápida (Steps). Portanto, nosso sistema age capturando devoluções via o encerramento do recurso de **Pagamentos Estornados** (`transaction_amount`). Isso nos concede um grau de visibilidade suficiente para disparar a Fila Operacional com notas razoáveis. Implementações futuras demandarão webhook realtime e polling em `/post-purchase/v1/claims` para pegar disputas antes de se tornarem reembolsos definitivos.
 
+---
+
+## Etapa 10: Conector Shopee (Integração Automática 3)
+
+Nesta etapa implementamos nosso terceiro grande canal: a **Shopee**. A API da Shopee exige um grau mais alto de criptografia em suas conexões corporativas de parceiros. Incorporamos o padrão Hashing HMAC-SHA256 para gerar assinaturas (Signatures) em tempo real provando a autenticidade de cada requisição.
+
+### Como Validar o Conector Shopee no Render
+
+1. **Configuração de Variáveis Globais (Render - API Service)**:
+   A API precisa das credenciais Master do Programa de Parceiros da Shopee. Vá no Render em *Environment Variables* e adicione:
+   - `SHOPEE_PARTNER_ID`: Número de identificação do parceiro Shopee.
+   - `SHOPEE_PARTNER_KEY`: A chave mestre do parceiro (Partner Key).
+   - `SHOPEE_API_BASE`: `https://partner.shopeemobile.com` (Padrão global).
+   - `ENCRYPTION_KEY_BASE64`: A chave mestra mantida desde a Etapa 8.
+
+2. **Iniciando Conexão na Loja via Front-End**:
+   - Faça Login no Painel Web (`/app`).
+   - Vá até **Conectores** no menu esquerdo.
+   - Existe um novo botão e quadro laranja "Conectar Shopee".
+   - Insira o `Shop ID` obrigatório. O `Access Token` é opcional dependendo do tipo do seu App na plataforma Shopee (algumas versões de Open API requerem, outras apenas confiam no Partner Key).
+   - Clique em **Conectar**.
+
+3. **Sincronização Incremental (Worker)**:
+   - Ao ser conectado com sucesso, um item "Shopee" aparecerá na seção de Conectores Ativos abaixo.
+   - Clique em **"Sincronizar agora"**.
+   - O BullMQ disparará o Job `shopee_sync`.
+   - Nossa esteira extrairá os dados das rotas `get_order_list` e `get_order_detail` da Shopee, utilizando sua "Order SN".
+   
+4. **Captura Derivada de Devoluções (Sinal Shopee)**:
+   - O worker filtra ativamente os pedidos lidos pelo campo de `order_status` da Shopee. Pedidos marcados com "CANCELLED" ou cujo `cancel_reason` tenha sido populado são automaticamente inferidos como cancelamentos de fraude ou devoluções sistêmicas prematuras.
+   - Elas são processadas instantaneamente virando uma modelagem canônica `return` em nosso banco, enviando em lote cada evento para as esteiras de ML `compute_features_for_return` e enchendo sua Fila de Casos com escores avaliativos.
+
+### Limitação de Sinais de Devolução (Shopee)
+Algumas sub-versões da *Open Platform Shopee API* (V2.1 e V2.2) travam fortemente acesso aos endpoints especializados `/api/v2/returns/get_return_list` atrás de uma Whitelist rígida de ERPs pré-aprovados pela matriz em Singapura. Portanto, para mantermos as engrenagens antifraude vitais sempre alimentadas em nosso código global, o MVP age identificando atritos no fluxo padrão de *status* da encomenda — cancelamentos e estornos marcados como `CANCELLED` no próprio Order Detail. Caso os parceiros subam na base Whitelist, basta substituir as assinaturas do `/get_order_list` para o `/get_return_list` reusando as funções prontas `generateShopeeSign`!
+
 ### Como testar o fluxo da Etapa 2
 1. **Migrations**: Rode a migração `prisma migrate dev` para criar as 11 novas tabelas base.
 2. **Setup Fake Data**: Popule o banco para isolamento rodando:
